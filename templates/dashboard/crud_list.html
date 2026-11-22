@@ -1,0 +1,43 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <form method="get" data-auto-search class="flex flex-wrap items-center gap-2">
+    <div class="relative"><i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i><input name="q" value="{{ q }}" placeholder="Tìm kiếm..." class="form-input w-64 py-2 pl-9" aria-label="Tìm kiếm"></div>
+    {% for param, label, choices, lookup in cfg.filters %}
+      <select name="{{ param }}" class="form-input w-auto py-2" data-autosubmit aria-label="{{ label }}">
+        <option value="">{{ label }}: tất cả</option>
+        {% for value, text in choices %}<option value="{{ value }}" {% if active_filters|get_item:param == value %}selected{% endif %}>{{ text }}</option>{% endfor %}
+      </select>
+    {% endfor %}
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <button type="submit" class="btn-secondary">Lọc</button>
+  </form>
+  <span class="text-muted">{{ total }} bản ghi{% if cfg.sortable %} · kéo ⋮⋮ để sắp xếp{% endif %}</span>
+  {% if cfg.can_add %}<a href="{% url 'dashboard:'|add:cfg.key|add:'_add' %}" class="btn-primary ml-auto"><i data-lucide="plus" class="h-4 w-4"></i>Thêm {{ cfg.singular }}</a>{% endif %}
+</div>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr>
+      {% if cfg.sortable %}<th class="w-8" title="Kéo để sắp xếp"></th>{% endif %}
+      {% for label, attr, sort_key in cfg.columns %}<th>{% if sort_key %}{% include 'dashboard/_sort.html' with key=sort_key label=label %}{% else %}{{ label }}{% endif %}</th>{% endfor %}
+      <th class="text-right">Hành động</th>
+    </tr></thead>
+    <tbody {% if cfg.sortable %}data-sortable-url="{% url 'dashboard:reorder' cfg.sortable %}"{% endif %}>
+      {% for row in rows %}
+        <tr {% if cfg.sortable %}data-sort-id="{{ row.obj.pk }}"{% endif %}>
+          {% if cfg.sortable %}<td class="cursor-grab select-none text-muted" title="Kéo để sắp xếp">⋮⋮</td>{% endif %}
+          {% for cell in row.cells %}<td>{{ cell|default_if_none:'—' }}</td>{% endfor %}
+          <td class="whitespace-nowrap text-right">
+            {% if row.detail_url %}<a href="{{ row.detail_url }}" class="btn-ghost btn-sm" title="Xem"><i data-lucide="eye" class="h-4 w-4"></i></a>{% endif %}
+            <a href="{% url 'dashboard:'|add:cfg.key|add:'_edit' row.obj.pk %}" class="btn-ghost btn-sm" title="Sửa"><i data-lucide="pencil" class="h-4 w-4"></i></a>
+            <form method="post" action="{% url 'dashboard:'|add:cfg.key|add:'_delete' row.obj.pk %}" class="inline" data-confirm="Xóa {{ cfg.singular }} “{{ row.obj }}”? Thao tác không thể hoàn tác." data-confirm-ok="Xóa">{% csrf_token %}<button type="submit" class="btn-ghost btn-sm text-danger" title="Xóa"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="{{ cfg.columns|length|add:2 }}">{% include 'dashboard/components/empty_state.html' with icon='inbox' title='Chưa có dữ liệu' %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

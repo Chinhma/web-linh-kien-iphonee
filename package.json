@@ -1,0 +1,20 @@
+{
+  "name": "weblk",
+  "version": "1.0.0",
+  "description": "iParts Store – Tailwind build",
+  "scripts": {
+    "dev": "tailwindcss -i ./static/src/input.css -o ./static/css/tailwind.css --watch",
+    "build": "tailwindcss -i ./static/src/input.css -o ./static/css/tailwind.css --minify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  },
+  "dependencies": {
+    "chart.js": "^4.6.1",
+    "lucide": "^0.577.0"
+  }
+}

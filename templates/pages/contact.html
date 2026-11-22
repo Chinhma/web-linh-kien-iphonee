@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Liên hệ{% endblock %}
+{% block content %}
+<div class="container-x py-6">
+  {% include 'includes/components/breadcrumb.html' %}
+  <h1 class="mb-6 text-2xl md:text-3xl">Liên hệ iParts Store</h1>
+  <div class="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <form method="post" class="card grid gap-4 p-6 sm:grid-cols-2" data-once>
+      {% csrf_token %}
+      {% include 'includes/components/field.html' with field=form.name %}
+      {% include 'includes/components/field.html' with field=form.email %}
+      {% include 'includes/components/field.html' with field=form.phone wrapper_class='sm:col-span-2' %}
+      {% include 'includes/components/field.html' with field=form.message wrapper_class='sm:col-span-2' %}
+      <div class="sm:col-span-2"><button type="submit" class="btn-primary">Gửi tin nhắn</button></div>
+    </form>
+    <aside class="card space-y-4 p-6 text-sm">
+      <h2 class="text-lg font-bold">Thông tin liên hệ</h2>
+      <p class="flex items-center gap-3"><i data-lucide="phone" class="h-5 w-5 text-primary"></i><a href="tel:{{ store.hotline }}" class="link">{{ store.hotline_display }}</a></p>
+      <p class="flex items-center gap-3"><i data-lucide="mail" class="h-5 w-5 text-primary"></i><a href="mailto:{{ store.email }}" class="link break-all">{{ store.email }}</a></p>
+      {% if store.working_hours %}<p class="flex items-center gap-3"><i data-lucide="clock" class="h-5 w-5 text-primary"></i>{{ store.working_hours }}</p>{% endif %}
+      {% if store.address %}<p class="flex items-center gap-3"><i data-lucide="map-pin" class="h-5 w-5 text-primary"></i>{{ store.address }}</p>{% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

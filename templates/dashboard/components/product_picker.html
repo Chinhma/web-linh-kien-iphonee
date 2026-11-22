@@ -1,0 +1,10 @@
+{# Ô chọn sản phẩm có gợi ý (ảnh + SKU + tồn kho). Biến: name (tên input), preset (Product hoặc None), required #}
+<div class="relative" data-product-picker data-url="{% url 'dashboard:api_product_suggest' %}">
+  <input type="hidden" name="{{ name|default:'product' }}" value="{{ preset.pk|default:'' }}" {% if required %}required{% endif %}>
+  <div class="relative">
+    <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+    <input type="text" autocomplete="off" data-picker-input value="{% if preset %}{{ preset.sku }} – {{ preset.name }}{% endif %}" placeholder="Gõ tên hoặc SKU sản phẩm..." class="form-input pl-9" aria-label="Chọn sản phẩm">
+  </div>
+  <div data-picker-results hidden class="absolute left-0 right-0 top-full z-40 mt-1 max-h-72 overflow-y-auto rounded-xl border border-border bg-white shadow-card-hover"></div>
+  <p data-picker-info class="mt-1 text-xs text-muted">{% if preset %}Tồn hiện tại: <strong>{{ preset.stock_quantity }}</strong> · Giá nhập: {{ preset.cost_price|vnd }}{% endif %}</p>
+</div>

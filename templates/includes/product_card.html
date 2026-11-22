@@ -1,0 +1,47 @@
+{# Product Card – dùng chung toàn site. Biến: product, wishlist_ids (tập ID đã yêu thích), dim (làm mờ) #}
+<article data-product-card class="group card card-hover relative flex flex-col overflow-hidden {% if dim %}opacity-60{% endif %}">
+  <a href="{{ product.get_absolute_url }}" class="absolute inset-0 z-[1]" aria-label="{{ product.name }}"></a>
+  <div class="relative aspect-square overflow-hidden bg-slate-50">
+    <img src="{{ product.image_url }}" alt="{{ product.name }}" loading="lazy" class="h-full w-full object-cover transition duration-300 {% if product.secondary_image %}group-hover:opacity-0{% endif %}">
+    {% if product.secondary_image %}
+      <img src="{{ product.secondary_image.image.url }}" alt="" loading="lazy" class="absolute inset-0 h-full w-full object-cover opacity-0 transition duration-300 group-hover:opacity-100">
+    {% endif %}
+    <div class="absolute left-2 top-2 flex flex-col gap-1">
+      {% if product.stock_quantity == 0 %}<span class="badge bg-slate-700 text-white">Hết hàng</span>
+      {% elif product.is_on_sale %}<span class="badge bg-danger text-white">-{{ product.discount_percent }}%</span>{% endif %}
+      {% if product.is_new %}<span class="badge bg-primary text-white">Mới</span>{% endif %}
+      {% if product.status == 'discontinued' %}<span class="badge bg-slate-700 text-white">Ngừng bán</span>{% endif %}
+    </div>
+    {% if not is_admin_user %}
+      <button type="button" data-wishlist-toggle="{{ product.pk }}" {% if remove_on_unwish %}data-remove-card{% endif %} aria-pressed="{% if product.pk in wishlist_ids %}true{% else %}false{% endif %}"
+              class="group/heart absolute right-2 top-2 z-[2] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-muted shadow-card transition hover:text-danger [&.is-wishlisted]:text-danger {% if product.pk in wishlist_ids %}is-wishlisted{% endif %}" aria-label="Yêu thích">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="group-[.is-wishlisted]/heart:fill-current" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      </button>
+    {% endif %}
+  </div>
+  <div class="flex flex-1 flex-col p-3.5">
+    <h3 class="line-clamp-2 min-h-[2.75rem] text-sm font-semibold leading-snug group-hover:text-primary">{{ product.name }}</h3>
+    <p class="mt-1 text-[11px] uppercase tracking-wide text-muted">{{ product.sku }}</p>
+    {% if product.compat_short %}<p class="mt-1.5 truncate text-xs text-muted"><span class="font-medium text-text">Dùng cho:</span> {{ product.compat_short }}</p>{% endif %}
+    {% if product.rating_count %}
+      <div class="mt-1.5 flex items-center gap-1 text-xs text-muted">{% include 'includes/components/stars.html' with rating=product.rating_avg size='h-3.5 w-3.5' %} ({{ product.rating_count }})</div>
+    {% endif %}
+    <div class="mt-auto pt-3">
+      <div class="flex flex-wrap items-baseline gap-x-2">
+        <span class="text-base font-bold text-primary">{{ product.effective_price|vnd }}</span>
+        {% if product.is_on_sale %}<span class="text-xs text-muted line-through">{{ product.price|vnd }}</span>{% endif %}
+      </div>
+      <div class="mt-1 flex items-center gap-1.5 text-xs">
+        <span class="h-2 w-2 rounded-full {% if product.stock_status == 'in_stock' %}bg-success{% elif product.stock_status == 'low_stock' %}bg-warning{% else %}bg-danger{% endif %}"></span>
+        <span class="text-muted">{{ product.stock_label }}</span>
+      </div>
+      {% if not is_admin_user %}
+        {% if product.stock_quantity > 0 and product.status == 'active' %}
+          <button type="button" data-add-to-cart="{{ product.pk }}" data-product-name="{{ product.name }}" class="btn-primary btn-sm relative z-[2] mt-3 w-full"><i data-lucide="shopping-cart" class="h-4 w-4"></i>Thêm vào giỏ</button>
+        {% else %}
+          <button type="button" disabled class="btn btn-sm relative z-[2] mt-3 w-full bg-slate-100 text-muted">Hết hàng</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</article>

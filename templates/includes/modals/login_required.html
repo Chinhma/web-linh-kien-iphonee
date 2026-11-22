@@ -1,0 +1,14 @@
+<div id="login-required-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+  <div class="relative w-full max-w-md rounded-modal bg-white p-6 text-center shadow-card-hover sm:p-8">
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-light text-primary"><i data-lucide="lock" class="h-7 w-7"></i></span>
+    <h2 id="login-modal-title" class="mt-4 text-xl font-bold">Bạn cần đăng nhập</h2>
+    <p class="mt-2 text-sm text-muted">Vui lòng đăng nhập hoặc đăng ký tài khoản để sử dụng chức năng mua hàng tại iParts Store.</p>
+    <div class="mt-6 grid gap-2">
+      <a href="{% url 'accounts:login' %}" data-login-link="{% url 'accounts:login' %}" class="btn-primary btn-lg">Đăng nhập</a>
+      <a href="{% url 'accounts:register' %}" data-login-link="{% url 'accounts:register' %}" class="btn-secondary btn-lg">Đăng ký</a>
+      {% include 'includes/components/google_button.html' %}
+      <button type="button" data-modal-close class="mt-1 text-sm text-muted hover:text-text">Để sau</button>
+    </div>
+  </div>
+</div>

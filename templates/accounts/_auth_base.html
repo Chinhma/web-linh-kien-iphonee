@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-x flex justify-center py-10 md:py-16">
+  <div class="grid w-full max-w-4xl overflow-hidden rounded-modal border border-border bg-white shadow-card-hover md:grid-cols-2">
+    <div class="hidden flex-col justify-between bg-gradient-to-br from-[#0F172A] to-primary p-10 text-white md:flex">
+      <img src="{% static 'images/brand/logo-horizontal-white.svg' %}?v=2" alt="{{ store.store_name }}" class="h-10 w-auto self-start">
+      <div>
+        <h2 class="text-white">Linh kiện iPhone chính xác cho từng dòng máy</h2>
+        <ul class="mt-6 space-y-3 text-sm text-blue-100">
+          <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="h-5 w-5"></i>Tra cứu tương thích theo từng model</li>
+          <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="h-5 w-5"></i>Bảo hành rõ ràng, đổi trả 7 ngày</li>
+          <li class="flex items-center gap-2"><i data-lucide="check-circle-2" class="h-5 w-5"></i>Tư vấn cùng iParts AI Assistant</li>
+        </ul>
+      </div>
+      <p class="text-xs text-blue-200">Hotline {{ store.hotline_display }}</p>
+    </div>
+    <div class="p-6 sm:p-10">
+      {% block auth_content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% endblock %}

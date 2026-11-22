@@ -1,0 +1,50 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}
+  <a href="{% url 'dashboard:compat_coverage' %}" class="btn-secondary"><i data-lucide="table-2" class="h-4 w-4"></i>Độ phủ</a>
+  <a href="{% url 'dashboard:compat_matrix' %}" class="btn-secondary"><i data-lucide="grid-3x3" class="h-4 w-4"></i>Ma trận</a>
+  <a href="{% url 'dashboard:compat_add' %}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm tương thích</a>
+{% endblock %}
+{% block content %}
+<div class="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+  {% for g in gaps %}<div class="card p-3 text-xs"><div class="text-muted">{{ g.name }}</div><div class="mt-1 text-lg font-bold {% if g.missing %}text-warning{% else %}text-success{% endif %}">{{ g.missing }}</div><div class="text-muted">dòng iPhone chưa có linh kiện</div></div>{% endfor %}
+</div>
+<form method="get" class="mb-3 flex flex-wrap items-center gap-2">
+  <div class="relative"><i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i><input name="q" value="{{ q }}" data-auto-search placeholder="Tên/SKU sản phẩm" class="form-input w-56 py-2 pl-9" aria-label="Tìm"></div>
+  <select name="model" class="form-input w-auto py-2" data-autosubmit aria-label="Dòng iPhone"><option value="">Dòng iPhone</option>{% for g in iphone_groups %}<optgroup label="{{ g.label }}">{% for m in g.models %}<option value="{{ m.slug }}" {% if request.GET.model == m.slug %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+  <select name="category" class="form-input w-auto py-2" data-autosubmit aria-label="Danh mục"><option value="">Danh mục</option>{% for c in categories %}<option value="{{ c.slug }}" {% if request.GET.category == c.slug %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+  <select name="status" class="form-input w-auto py-2" data-autosubmit aria-label="Trạng thái"><option value="">Trạng thái</option>{% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="sample" class="form-input w-auto py-2" data-autosubmit aria-label="Dữ liệu mẫu"><option value="">Dữ liệu mẫu?</option><option value="1" {% if request.GET.sample == '1' %}selected{% endif %}>Có</option><option value="0" {% if request.GET.sample == '0' %}selected{% endif %}>Không</option></select>
+  <button class="btn-secondary">Lọc</button>
+  {% if request.GET %}<a href="?" class="btn-ghost btn-sm">Xóa bộ lọc</a>{% endif %}
+</form>
+<form id="bulk-form" method="post" action="{% url 'dashboard:compat_bulk' %}" data-bulk-form>
+  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div data-bulk-bar="bulk-form" hidden class="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-footer-bg px-4 py-2.5 text-sm text-white">
+    <span>Đã chọn <strong data-bulk-count>0</strong> quan hệ:</span>
+    <button type="submit" name="action" value="verified" class="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Xác nhận</button>
+    <button type="submit" name="action" value="unverified" class="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Chuyển "Chưa xác nhận"</button>
+    <button type="submit" name="action" value="incompatible" class="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Không tương thích</button>
+    <button type="submit" name="action" value="delete" class="rounded-lg bg-red-500/80 px-3 py-1.5 hover:bg-red-500">Xóa</button>
+  </div>
+</form>
+<div class="mb-3 text-sm text-muted">{{ total }} quan hệ tương thích</div>
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr><th><input type="checkbox" class="form-check" data-check-all="bulk-form" aria-label="Chọn tất cả"></th><th>{% include 'dashboard/_sort.html' with key='product' label='Sản phẩm' %}</th><th>Danh mục</th><th>{% include 'dashboard/_sort.html' with key='model' label='Dòng iPhone' %}</th><th>{% include 'dashboard/_sort.html' with key='status' label='Trạng thái' %}</th><th>Ghi chú</th><th>Mẫu</th><th>{% include 'dashboard/_sort.html' with key='verified' label='Xác nhận' %}</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page_obj %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ c.pk }}" form="bulk-form" class="form-check" aria-label="Chọn"></td>
+          <td class="max-w-xs"><div class="flex items-center gap-2"><img src="{{ c.product.image_url }}" alt="" class="h-9 w-9 rounded object-cover"><div><div class="line-clamp-2 font-medium">{{ c.product.name }}</div><div class="text-xs text-muted">{{ c.product.sku }}</div></div></div></td>
+          <td class="text-muted">{{ c.product.category.name }}</td><td class="whitespace-nowrap">{{ c.iphone_model.name }}</td>
+          <td>{% status_badge c.status c.get_status_display %}</td><td class="max-w-[200px] truncate text-muted" title="{{ c.note }}">{{ c.note|default:'—' }}</td>
+          <td>{% if c.is_sample_data %}<span class="badge-muted">Mẫu</span>{% endif %}</td>
+          <td class="whitespace-nowrap text-xs text-muted">{% if c.verified_at %}{{ c.verified_by.display_name|default:'Hệ thống' }}<br>{{ c.verified_at|d }}{% else %}—{% endif %}</td>
+          <td><a href="{% url 'dashboard:compat_edit' c.pk %}" class="btn-ghost btn-sm"><i data-lucide="pencil" class="h-4 w-4"></i></a></td>
+        </tr>
+      {% empty %}<tr><td colspan="9" class="py-12 text-center text-muted">Chưa có dữ liệu tương thích.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

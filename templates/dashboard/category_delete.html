@@ -1,0 +1,43 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:category_list' %}" class="btn-ghost"><i data-lucide="arrow-left" class="h-4 w-4"></i>Cây danh mục</a>{% endblock %}
+{% block content %}
+<form method="post" class="card max-w-2xl space-y-5 p-6">
+  {% csrf_token %}
+  <div class="flex items-start gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
+    <i data-lucide="alert-triangle" class="h-5 w-5 shrink-0"></i>
+    <p>Bạn sắp xóa danh mục <strong>“{{ category.name }}”</strong> ({{ category.code }}). Sản phẩm <strong>không bị xóa</strong> mà được chuyển sang danh mục bạn chọn bên dưới.</p>
+  </div>
+
+  {% if products_count %}
+    <label class="block">
+      <span class="form-label">Chuyển {{ products_count }} sản phẩm sang danh mục <span class="text-danger">*</span></span>
+      <select name="move_products_to" required class="form-input mt-1">
+        <option value="">— Chọn danh mục —</option>
+        {% regroup leaf_targets by parent as groups %}
+        {% for g in groups %}
+          {% if g.grouper %}<optgroup label="{{ g.grouper.name }}">{% for c in g.list %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}</optgroup>
+          {% else %}{% for c in g.list %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}{% endif %}
+        {% endfor %}
+      </select>
+    </label>
+  {% else %}
+    <p class="text-sm text-muted">Danh mục này không có sản phẩm trực tiếp.</p>
+  {% endif %}
+
+  {% if children %}
+    <div>
+      <p class="form-label">Danh mục con ({{ children|length }}): {% for c in children %}<span class="badge-muted">{{ c.name }}</span> {% endfor %}</p>
+      <p class="mb-1 text-xs text-muted">Danh mục con và sản phẩm của chúng được giữ nguyên, chỉ đổi danh mục cha.</p>
+      <select name="move_children_to" class="form-input mt-1">
+        <option value="">Chuyển thành danh mục cấp 1</option>
+        {% for p in parent_targets %}<option value="{{ p.pk }}">Chuyển vào “{{ p.name }}”</option>{% endfor %}
+      </select>
+    </div>
+  {% endif %}
+
+  <div class="flex justify-end gap-2 border-t border-border pt-4">
+    <a href="{% url 'dashboard:category_list' %}" class="btn-ghost">Hủy</a>
+    <button type="submit" class="btn-danger"><i data-lucide="trash-2" class="h-4 w-4"></i>Xóa danh mục</button>
+  </div>
+</form>
+{% endblock %}

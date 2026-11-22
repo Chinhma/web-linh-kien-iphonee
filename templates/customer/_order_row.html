@@ -1,0 +1,16 @@
+{% with first=order.items.all.0 count=order.items.all|length %}
+<a href="{% url 'orders:detail' order.code %}" class="flex flex-col gap-3 border-b border-border p-4 transition last:border-0 hover:bg-slate-50 sm:flex-row sm:items-center">
+  <div class="flex min-w-0 flex-1 items-center gap-3">
+    {% if first.product_image %}<img src="{{ MEDIA_URL }}{{ first.product_image }}" alt="" class="h-14 w-14 shrink-0 rounded-lg bg-slate-50 object-cover" loading="lazy">{% else %}<span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-slate-100"><i data-lucide="package" class="h-6 w-6 text-muted"></i></span>{% endif %}
+    <div class="min-w-0">
+      <div class="font-semibold">{{ order.code }} <span class="text-xs font-normal text-muted">· {{ order.created_at|dt }}</span></div>
+      <div class="truncate text-sm text-muted">{{ first.product_name }}{% if count > 1 %} và {{ count|add:'-1' }} sản phẩm khác{% endif %}</div>
+    </div>
+  </div>
+  <div class="flex flex-wrap items-center gap-2 sm:justify-end">
+    {% status_badge order.payment_status order.get_payment_status_display %}
+    {% status_badge order.status order.get_status_display %}
+    <span class="w-28 text-right font-bold text-primary">{{ order.total|vnd }}</span>
+  </div>
+</a>
+{% endwith %}

@@ -1,0 +1,21 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="mt-8 flex flex-wrap items-center justify-center gap-1" aria-label="Phân trang">
+  {% if page_obj.has_previous %}
+    <a href="?{% url_replace page=page_obj.previous_page_number %}" class="icon-btn border border-border bg-white" aria-label="Trang trước"><i data-lucide="chevron-left" class="h-4 w-4"></i></a>
+  {% endif %}
+  {% for num in page_obj.paginator.page_range %}
+    {% if num == page_obj.number %}
+      <span class="flex h-10 min-w-10 items-center justify-center rounded-full bg-primary px-3 text-sm font-semibold text-white" aria-current="page">{{ num }}</span>
+    {% elif num == 1 or num == page_obj.paginator.num_pages %}
+      <a href="?{% url_replace page=num %}" class="flex h-10 min-w-10 items-center justify-center rounded-full border border-border bg-white px-3 text-sm hover:border-primary hover:text-primary">{{ num }}</a>
+    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+      <a href="?{% url_replace page=num %}" class="flex h-10 min-w-10 items-center justify-center rounded-full border border-border bg-white px-3 text-sm hover:border-primary hover:text-primary">{{ num }}</a>
+    {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+      <span class="px-1 text-muted">…</span>
+    {% endif %}
+  {% endfor %}
+  {% if page_obj.has_next %}
+    <a href="?{% url_replace page=page_obj.next_page_number %}" class="icon-btn border border-border bg-white" aria-label="Trang sau"><i data-lucide="chevron-right" class="h-4 w-4"></i></a>
+  {% endif %}
+</nav>
+{% endif %}

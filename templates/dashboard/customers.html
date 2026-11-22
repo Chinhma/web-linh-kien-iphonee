@@ -1,0 +1,38 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="?{% url_replace export='csv' %}" class="btn-secondary"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a>{% endblock %}
+{% block content %}
+<div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/components/stat_card.html' with icon='users' label='Tổng khách hàng' value=stats.total %}
+  {% include 'dashboard/components/stat_card.html' with icon='user-plus' color='bg-green-100 text-success' label='Mới trong 30 ngày' value=stats.new30 %}
+  {% include 'dashboard/components/stat_card.html' with icon='shopping-bag' color='bg-amber-100 text-warning' label='Đã từng mua hàng' value=stats.buyers %}
+  {% include 'dashboard/components/stat_card.html' with icon='lock' color='bg-red-100 text-danger' label='Đã khóa' value=stats.locked url='?state=locked' %}
+</div>
+<form method="get" data-auto-search class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  <input name="q" value="{{ q }}" placeholder="Tên, email, SĐT" class="form-input w-64 py-2" aria-label="Tìm">
+  <select name="state" class="form-input w-auto py-2" aria-label="Trạng thái"><option value="">Trạng thái</option><option value="active" {% if request.GET.state == 'active' %}selected{% endif %}>Hoạt động</option><option value="locked" {% if request.GET.state == 'locked' %}selected{% endif %}>Đã khóa</option></select>
+  <select name="provider" class="form-input w-auto py-2" aria-label="Đăng ký bằng"><option value="">Đăng ký bằng</option><option value="local" {% if request.GET.provider == 'local' %}selected{% endif %}>Email</option><option value="google" {% if request.GET.provider == 'google' %}selected{% endif %}>Google</option></select>
+  <label class="text-xs text-muted">Đăng ký từ<input type="date" name="from" value="{{ request.GET.from }}" class="form-input mt-1 py-1.5"></label>
+  <label class="text-xs text-muted">Đến<input type="date" name="to" value="{{ request.GET.to }}" class="form-input mt-1 py-1.5"></label>
+  <button class="btn-secondary">Lọc</button>
+  <span class="ml-auto text-muted">{{ total }} khách hàng</span>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr><th>{% include 'dashboard/_sort.html' with key='name' label='Khách hàng' %}</th><th>SĐT</th><th>Đăng ký bằng</th><th>{% include 'dashboard/_sort.html' with key='joined' label='Ngày đăng ký' %}</th><th>{% include 'dashboard/_sort.html' with key='orders' label='Số đơn' %}</th><th>{% include 'dashboard/_sort.html' with key='spent' label='Tổng chi tiêu' %}</th><th>Trạng thái</th><th></th></tr></thead>
+    <tbody>
+      {% for u in page_obj %}
+        <tr>
+          <td><div class="flex items-center gap-2">
+            {% if u.avatar %}<img src="{{ u.avatar.url }}" alt="" class="h-9 w-9 rounded-full object-cover">{% else %}<span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary-light font-bold text-primary">{{ u|initials }}</span>{% endif %}
+            <div><div class="font-medium">{{ u.display_name }}</div><div class="text-xs text-muted">{{ u.email }}</div></div></div></td>
+          <td>{{ u.phone|default:'—' }}</td><td>{{ u.get_auth_provider_display }}</td><td class="text-muted">{{ u.date_joined|d }}</td>
+          <td>{{ u.order_total }}</td><td class="font-semibold">{{ u.spent|default:0|vnd }}</td>
+          <td>{% if u.is_active %}<span class="badge-success">Hoạt động</span>{% else %}<span class="badge-danger">Đã khóa</span>{% endif %}</td>
+          <td><a href="{% url 'dashboard:customer_detail' u.pk %}" class="btn-ghost btn-sm"><i data-lucide="eye" class="h-4 w-4"></i></a></td>
+        </tr>
+      {% empty %}<tr><td colspan="8">{% include 'dashboard/components/empty_state.html' with icon='users' title='Không có khách hàng phù hợp' %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

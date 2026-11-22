@@ -1,0 +1,22 @@
+{% extends 'customer/_base.html' %}
+{% block title %}Đơn hàng của tôi{% endblock %}
+{% block account_content %}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl">Đơn hàng của tôi</h1>
+  <form method="get" class="relative">
+    {% if tab %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+    <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+    <input name="q" value="{{ q }}" placeholder="Tìm theo mã đơn" class="form-input w-56 pl-9" aria-label="Tìm theo mã đơn">
+  </form>
+</div>
+<div class="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-border">
+  {% for key, label, count in tabs %}
+    <a href="?{% if key %}tab={{ key }}{% endif %}" class="tab-btn {% if tab == key %}is-active{% endif %}">{{ label }} <span class="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{{ count }}</span></a>
+  {% endfor %}
+</div>
+<div class="card overflow-hidden">
+  {% for order in page_obj %}{% include 'customer/_order_row.html' %}
+  {% empty %}<div class="p-10 text-center text-sm text-muted">Không có đơn hàng nào.</div>{% endfor %}
+</div>
+{% include 'includes/components/pagination.html' %}
+{% endblock %}

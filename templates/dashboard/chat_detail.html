@@ -1,0 +1,42 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:chat_history' %}" class="btn-ghost"><i data-lucide="arrow-left" class="h-4 w-4"></i>Lịch sử hội thoại</a>{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelector('[data-tech-toggle]')?.addEventListener('change', (e) => {
+    document.querySelectorAll('[data-tech]').forEach((el) => {
+      el.classList.toggle('hidden', !e.target.checked);
+      if (el.tagName === 'DIV') el.classList.toggle('flex', e.target.checked);
+    });
+  });
+</script>
+{% endblock %}
+{% block content %}
+<div class="card mx-auto max-w-3xl p-5" data-tech-scope>
+  <label class="float-right flex cursor-pointer items-center gap-2 text-sm text-muted"><input type="checkbox" class="form-check" data-tech-toggle>Xem chi tiết kỹ thuật</label>
+  <p class="mb-4 text-muted">{% if conversation.user %}{{ conversation.user.display_name }} ({{ conversation.user.email }}){% else %}Khách vãng lai{% endif %} · bắt đầu {{ conversation.created_at|dt }}</p>
+  <div class="space-y-4">
+    {% for m in chat_messages %}
+      {% if m.role == 'user' %}
+        <div class="flex flex-col items-end"><div class="chat-bubble-user whitespace-pre-wrap">{{ m.content }}</div><span class="mt-1 text-[10px] text-muted">{{ m.created_at|dt }}</span></div>
+      {% else %}
+        <div>
+          <div class="chat-bubble-bot space-y-1">{{ m.content|simple_markdown }}</div>
+          <div class="mt-1 text-[11px] text-muted">{{ m.created_at|dt }}{% if m.is_error %} · <span class="text-danger">trả lời dự phòng</span>{% endif %}</div>
+          <div class="mt-1 hidden flex-wrap gap-1.5 text-[11px] text-muted" data-tech>
+            {% if m.intent %}<span class="badge-primary">intent: {{ m.intent }}</span>{% endif %}
+            {% if m.meta.mode %}<span class="badge-muted">chế độ: {{ m.meta.mode }}</span>{% endif %}
+            {% if m.latency_ms %}<span class="badge-muted">{{ m.latency_ms }} ms</span>{% endif %}
+            {% if m.is_error %}<span class="badge-danger">lỗi → dự phòng</span>{% endif %}
+            {% if m.products %}<span class="badge-muted">{{ m.products|length }} sản phẩm gợi ý</span>{% endif %}
+          </div>
+          {% if m.tool_calls %}
+            <details class="mt-1 hidden text-xs" data-tech><summary class="cursor-pointer text-primary">Công cụ đã gọi ({{ m.tool_calls|length }})</summary>
+              <ul class="mt-1 space-y-0.5 rounded-lg bg-slate-50 p-2 font-mono">{% for t in m.tool_calls %}<li>{{ t.name }}({{ t.args }})</li>{% endfor %}</ul>
+            </details>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

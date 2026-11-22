@@ -1,0 +1,38 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<form method="get" class="mb-4 flex flex-wrap items-center gap-2">
+  <select name="category" class="form-input w-auto py-2" data-autosubmit aria-label="Danh mục">{% for c in categories %}<option value="{{ c.slug }}" {% if category.pk == c.pk %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+  <span class="text-muted">Bấm vào ô để đổi: trống → <span class="badge-success">✔</span> → <span class="badge-warning">?</span> → <span class="badge-danger">✖</span> → trống</span>
+  <a href="{% url 'dashboard:compat_list' %}" class="btn-ghost ml-auto">Chế độ danh sách</a>
+</form>
+<div class="card overflow-auto" style="max-height: 75vh">
+  <table class="text-xs" data-matrix data-url="{% url 'dashboard:compat_matrix_toggle' %}">
+    <thead><tr><th class="sticky left-0 top-0 z-20 min-w-[220px] bg-slate-50 p-2 text-left">Sản phẩm</th>{% for m in models %}<th class="sticky top-0 z-10 bg-slate-50 p-2 font-medium"><div class="w-14 whitespace-normal">{{ m.name|cut:'iPhone ' }}</div></th>{% endfor %}</tr></thead>
+    <tbody>
+      {% for row in rows %}
+        <tr class="border-t border-border">
+          <th class="sticky left-0 z-10 bg-white p-2 text-left font-medium">{{ row.product.name|truncatechars:50 }}</th>
+          {% for m, status in row.cells %}
+            <td class="p-1 text-center"><button type="button" data-cell data-product="{{ row.product.pk }}" data-model="{{ m.pk }}" data-status="{{ status }}" class="h-7 w-10 rounded font-bold" aria-label="{{ row.product.name }} – {{ m.name }}">{% if status == 'verified' %}✔{% elif status == 'unverified' %}?{% elif status == 'incompatible' %}✖{% endif %}</button></td>
+          {% endfor %}
+        </tr>
+      {% empty %}<tr><td class="p-8 text-muted">Danh mục chưa có sản phẩm.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { apiFetch } from '/static/js/core/api.js';
+  const table = document.querySelector('[data-matrix]');
+  const STYLE = { verified: ['bg-green-100 text-green-700', '✔'], unverified: ['bg-amber-100 text-amber-700', '?'], incompatible: ['bg-red-100 text-red-700', '✖'], '': ['bg-slate-50 text-slate-300 hover:bg-slate-100', ''] };
+  const paint = (btn) => { const [cls, text] = STYLE[btn.dataset.status] || STYLE['']; btn.className = `h-7 w-10 rounded font-bold ${cls}`; btn.textContent = text; };
+  table.querySelectorAll('[data-cell]').forEach((btn) => {
+    paint(btn);
+    btn.addEventListener('click', async () => {
+      const body = new FormData(); body.append('product', btn.dataset.product); body.append('model', btn.dataset.model);
+      try { const res = await apiFetch(table.dataset.url, { method: 'POST', body }); btn.dataset.status = res.data.status; paint(btn); } catch (e) { /* đã toast */ }
+    });
+  });
+</script>
+{% endblock %}

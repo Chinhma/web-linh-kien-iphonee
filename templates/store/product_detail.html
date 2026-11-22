@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block meta_description %}{{ product.short_description|default:product.name|truncatechars:160 }}{% endblock %}
+{% block og_title %}{{ product.name }}{% endblock %}
+{% block og_image %}<meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ product.image_url }}">{% endblock %}
+
+{% block content %}
+<div class="container-x py-6">
+  {% include 'includes/components/breadcrumb.html' %}
+
+  <div class="grid gap-8 lg:grid-cols-2">
+    {# ---------- Gallery ---------- #}
+    <section aria-label="Hình ảnh sản phẩm" data-gallery>
+      <button type="button" class="card relative block aspect-square w-full overflow-hidden" data-gallery-main aria-label="Xem ảnh lớn">
+        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="h-full w-full object-cover transition duration-300 hover:scale-110" data-gallery-image>
+        {% if product.is_on_sale %}<span class="badge absolute left-3 top-3 bg-danger text-white">-{{ product.discount_percent }}%</span>{% endif %}
+      </button>
+      {% if images|length > 1 %}
+        <div class="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+          {% for img in images %}
+            <button type="button" data-gallery-thumb="{{ img.image.url }}" class="h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 {% if forloop.first %}border-primary{% else %}border-border{% endif %}" aria-label="Ảnh {{ forloop.counter }}">
+              <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:product.name }}" class="h-full w-full object-cover" loading="lazy">
+            </button>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </section>
+
+    {# ---------- Thông tin mua hàng ---------- #}
+    <section>
+      <h1 class="text-2xl md:text-3xl">{{ product.name }}</h1>
+      <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <span class="text-muted">SKU: <strong class="text-text">{{ product.sku }}</strong></span>
+        {% if product.brand %}<span class="badge-muted">{{ product.brand.name }}</span>{% endif %}
+        <span class="badge-primary">{{ product.get_quality_grade_display }}</span>
+      </div>
+      <a href="#tab-reviews" data-open-tab="reviews" class="mt-2 inline-flex items-center gap-2 text-sm text-muted hover:text-primary">
+        {% include 'includes/components/stars.html' with rating=product.rating_avg %}
+        {% if product.rating_count %}{{ product.rating_avg|floatformat:1 }} ({{ product.rating_count }} đánh giá){% else %}Chưa có đánh giá{% endif %}
+      </a>
+
+      <div class="card mt-5 p-5">
+        <div class="flex flex-wrap items-baseline gap-3">
+          <span class="text-3xl font-bold text-primary">{{ product.effective_price|vnd }}</span>
+          {% if product.is_on_sale %}
+            <span class="text-lg text-muted line-through">{{ product.price|vnd }}</span>
+            <span class="badge-danger">Giảm {{ product.discount_percent }}%</span>
+          {% endif %}
+        </div>
+        {% if product.is_on_sale and product.sale_end %}<p class="mt-1 text-xs text-danger">Khuyến mãi kết thúc lúc {{ product.sale_end|dt }}</p>{% endif %}
+        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <span class="flex items-center gap-1.5">
+            <span class="h-2.5 w-2.5 rounded-full {% if product.stock_status == 'in_stock' %}bg-success{% elif product.stock_status == 'low_stock' %}bg-warning{% else %}bg-danger{% endif %}"></span>{{ product.stock_label }}
+          </span>
+          <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="h-4 w-4 text-success"></i>Bảo hành {{ product.warranty_months }} tháng</span>
+        </div>
+      </div>
+
+      {# Tương thích #}
+      <div class="mt-5">
+        <h2 class="mb-2 text-base font-semibold">Tương thích với</h2>
+        {% if verified_comps %}
+          <div class="flex flex-wrap gap-2">
+            {% for c in verified_comps %}
+              <a href="{% url 'products:compatibility' %}?model={{ c.iphone_model.slug }}" class="chip"><i data-lucide="check" class="h-3.5 w-3.5 text-success"></i>{{ c.iphone_model.name }}</a>
+            {% endfor %}
+          </div>
+          {% for c in verified_comps %}{% if c.note %}<p class="mt-2 text-xs text-muted"><strong>{{ c.iphone_model.name }}:</strong> {{ c.note }}</p>{% endif %}{% endfor %}
+        {% else %}
+          <p class="text-sm text-muted">Chưa có dữ liệu tương thích đã xác nhận.</p>
+        {% endif %}
+        {% for c in incompatible_comps %}
+          <p class="mt-2 flex items-center gap-1.5 text-sm text-danger"><i data-lucide="ban" class="h-4 w-4"></i>Không dùng cho {{ c.iphone_model.name }}{% if c.note %} – {{ c.note }}{% endif %}</p>
+        {% endfor %}
+      </div>
+
+      {# Kiểm tra máy của bạn #}
+      <div class="mt-5 rounded-card border border-dashed border-primary/40 bg-primary-light/40 p-4" data-compat-check data-url="{% url 'products:api_product_check' product.pk %}">
+        <label for="check-model" class="form-label flex items-center gap-2"><i data-lucide="smartphone" class="h-4 w-4 text-primary"></i>Kiểm tra máy của bạn</label>
+        <select id="check-model" class="form-input">
+          <option value="">— Chọn dòng iPhone của bạn —</option>
+          {% for group in iphone_groups %}
+            <optgroup label="{{ group.label }}">{% for m in group.models %}<option value="{{ m.slug }}">{{ m.name }}</option>{% endfor %}</optgroup>
+          {% endfor %}
+        </select>
+        <div data-compat-result class="mt-3 hidden rounded-lg px-3 py-2 text-sm font-medium" role="status"></div>
+      </div>
+
+      {# Mua hàng (Customer/Guest) – Admin thấy khối Công cụ quản trị #}
+      {% if not is_admin_user %}
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          {% if product.is_purchasable %}
+            {% include 'includes/components/stepper.html' with input_id='detail-qty' max=max_qty %}
+            <button type="button" class="btn-secondary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-product-name="{{ product.name }}" data-qty-input="#detail-qty"><i data-lucide="shopping-cart" class="h-5 w-5"></i>Thêm vào giỏ hàng</button>
+            <button type="button" class="btn-primary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-buy-now data-product-name="{{ product.name }}" data-qty-input="#detail-qty">Mua ngay</button>
+          {% else %}
+            <button type="button" disabled class="btn btn-lg flex-1 bg-slate-100 text-muted">{% if product.stock_quantity == 0 %}Hết hàng{% else %}Ngừng kinh doanh{% endif %}</button>
+          {% endif %}
+          <button type="button" data-wishlist-toggle="{{ product.pk }}" aria-pressed="{{ in_wishlist|yesno:'true,false' }}"
+                  class="group/heart icon-btn h-12 w-12 border border-border [&.is-wishlisted]:text-danger {% if in_wishlist %}is-wishlisted{% endif %}" aria-label="Yêu thích">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="group-[.is-wishlisted]/heart:fill-current" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </button>
+        </div>
+      {% else %}
+        <div class="mt-6 rounded-card border border-primary/30 bg-primary-light/40 p-5">
+          <h2 class="flex items-center gap-2 font-bold"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>Công cụ quản trị</h2>
+          <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
+            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Tồn kho</dt><dd class="text-lg font-bold">{{ product.stock_quantity }}</dd></div>
+            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Giá nhập</dt><dd class="text-lg font-bold">{{ product.cost_price|vnd }}</dd></div>
+            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Trạng thái</dt><dd class="mt-1">{% status_badge product.status product.get_status_display %}</dd></div>
+          </dl>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a href="{% url 'dashboard:product_edit' product.pk %}" class="btn-primary"><i data-lucide="pencil" class="h-4 w-4"></i>Sửa sản phẩm</a>
+            <a href="{% url 'dashboard:inventory_import' %}?product={{ product.pk }}" class="btn-secondary"><i data-lucide="package-plus" class="h-4 w-4"></i>Nhập kho</a>
+            <a href="{% url 'dashboard:compat_list' %}?q={{ product.sku|urlencode }}" class="btn-secondary"><i data-lucide="git-compare-arrows" class="h-4 w-4"></i>Quản lý tương thích</a>
+          </div>
+        </div>
+      {% endif %}
+
+      <ul class="mt-6 grid gap-3 text-sm sm:grid-cols-3">
+        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>Bảo hành {{ product.warranty_months }} tháng</li>
+        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="refresh-ccw" class="h-5 w-5 text-primary"></i>Đổi trả 7 ngày</li>
+        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="truck" class="h-5 w-5 text-primary"></i>Giao toàn quốc</li>
+      </ul>
+      <p class="mt-4 text-sm text-muted">Cần tư vấn? Gọi <a href="tel:{{ store.hotline }}" class="link">{{ store.hotline_display }}</a></p>
+    </section>
+  </div>
+
+  {# ---------- Tabs ---------- #}
+  <section class="card mt-10" data-tabs>
+    <div class="no-scrollbar flex overflow-x-auto border-b border-border px-2" role="tablist">
+      <button type="button" class="tab-btn is-active" data-tab="description" role="tab">Mô tả</button>
+      <button type="button" class="tab-btn" data-tab="specs" role="tab">Thông số kỹ thuật</button>
+      <button type="button" class="tab-btn" data-tab="guide" role="tab">Hướng dẫn & lưu ý lắp đặt</button>
+      <button type="button" class="tab-btn" data-tab="warranty" role="tab">Chính sách bảo hành</button>
+      <button type="button" class="tab-btn" data-tab="reviews" role="tab" id="tab-reviews">Đánh giá ({{ product.rating_count }})</button>
+    </div>
+    <div class="p-5 md:p-8">
+      <div data-tab-panel="description" class="prose-ip max-w-3xl text-sm leading-relaxed">
+        {% if product.short_description %}<p class="font-medium">{{ product.short_description }}</p>{% endif %}
+        {{ product.description|simple_markdown|default:'<p class="text-muted">Chưa có mô tả.</p>' }}
+      </div>
+      <div data-tab-panel="specs" hidden>
+        {% if product.specifications %}
+          <table class="w-full max-w-2xl text-sm">
+            <tbody>{% for spec in product.specifications %}<tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">{{ spec.label }}</th><td class="px-4 py-3">{{ spec.value }}</td></tr>{% endfor %}</tbody>
+          </table>
+        {% else %}<p class="text-sm text-muted">Chưa có thông số.</p>{% endif %}
+      </div>
+      <div data-tab-panel="guide" hidden class="prose-ip max-w-3xl text-sm">{{ product.usage_guide|simple_markdown|default:'<p class="text-muted">Chưa có hướng dẫn.</p>' }}</div>
+      <div data-tab-panel="warranty" hidden class="prose-ip max-w-3xl text-sm">
+        <p>Sản phẩm được bảo hành <strong>{{ product.warranty_months }} tháng</strong> kể từ ngày nhận hàng.</p>
+        {% if warranty_page %}{{ warranty_page.content|truncatewords:120|simple_markdown }}<a href="{{ warranty_page.get_absolute_url }}" class="link">Xem đầy đủ chính sách bảo hành</a>{% endif %}
+      </div>
+      <div data-tab-panel="reviews" hidden>
+        <div class="grid gap-8 md:grid-cols-[240px_1fr]">
+          <div>
+            <div class="text-5xl font-bold">{{ product.rating_avg|floatformat:1 }}</div>
+            {% include 'includes/components/stars.html' with rating=product.rating_avg size='h-5 w-5' %}
+            <p class="mt-1 text-sm text-muted">{{ product.rating_count }} đánh giá</p>
+            <div class="mt-4 space-y-1.5">
+              {% for star, count in distribution.items %}
+                <a href="?sao={{ star }}#tab-reviews" class="flex items-center gap-2 text-xs {% if star_filter == star|stringformat:'s' %}font-bold text-primary{% endif %}">
+                  <span class="w-8">{{ star }} ★</span>
+                  <span class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100"><span class="block h-full rounded-full bg-warning" style="width: {{ count|percent_of:product.rating_count }}%"></span></span>
+                  <span class="w-6 text-right text-muted">{{ count }}</span>
+                </a>
+              {% endfor %}
+              {% if star_filter %}<a href="?#tab-reviews" class="link text-xs">Bỏ lọc số sao</a>{% endif %}
+            </div>
+          </div>
+          <div>
+            {% if review_item %}
+              <form method="post" action="{% url 'reviews:create' %}" class="card mb-6 space-y-3 p-4" data-once>
+                {% csrf_token %}
+                <input type="hidden" name="order_item_id" value="{{ review_item.pk }}">
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <p class="font-semibold">Viết đánh giá cho đơn {{ review_item.order.code }}</p>
+                <fieldset class="flex flex-row-reverse justify-end gap-1" aria-label="Chọn số sao">
+                  {% for n in '54321' %}
+                    <input type="radio" id="rate{{ n }}" name="rating" value="{{ n }}" class="peer sr-only" required {% if n == '5' %}checked{% endif %}>
+                    <label for="rate{{ n }}" class="cursor-pointer text-2xl text-border hover:text-warning peer-checked:text-warning [&:hover~label]:text-warning peer-checked:[&~label]:text-warning">★</label>
+                  {% endfor %}
+                </fieldset>
+                <textarea name="content" rows="3" minlength="10" maxlength="1000" required class="form-input" placeholder="Chia sẻ trải nghiệm của bạn (10–1000 ký tự)"></textarea>
+                <button type="submit" class="btn-primary">Gửi đánh giá</button>
+              </form>
+            {% elif not user.is_authenticated %}
+              <p class="mb-6 rounded-xl bg-slate-50 p-4 text-sm text-muted">Đăng nhập và mua sản phẩm để đánh giá. <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="link">Đăng nhập</a></p>
+            {% endif %}
+            {% for review in reviews_page %}
+              <article class="border-b border-border py-4 last:border-0">
+                <div class="flex flex-wrap items-center gap-2 text-sm">
+                  <span class="font-semibold">{{ review.author_display }}</span>
+                  <span class="badge-success">Đã mua hàng</span>
+                  <span class="text-xs text-muted">{{ review.created_at|d }}</span>
+                </div>
+                <div class="mt-1">{% include 'includes/components/stars.html' with rating=review.rating size='h-3.5 w-3.5' %}</div>
+                <p class="mt-2 text-sm leading-relaxed">{{ review.content }}</p>
+                {% if review.admin_reply %}<div class="mt-2 rounded-lg bg-primary-light/50 p-3 text-sm"><strong>iParts Store:</strong> {{ review.admin_reply }}</div>{% endif %}
+              </article>
+            {% empty %}
+              <p class="text-sm text-muted">Chưa có đánh giá nào{% if star_filter %} với {{ star_filter }} sao{% endif %}.</p>
+            {% endfor %}
+            {% if reviews_page.paginator.num_pages > 1 %}
+              <div class="mt-4 flex gap-2">
+                {% if reviews_page.has_previous %}<a class="btn-secondary btn-sm" href="?{% url_replace trang_dg=reviews_page.previous_page_number %}#tab-reviews">Trước</a>{% endif %}
+                <span class="self-center text-xs text-muted">Trang {{ reviews_page.number }}/{{ reviews_page.paginator.num_pages }}</span>
+                {% if reviews_page.has_next %}<a class="btn-secondary btn-sm" href="?{% url_replace trang_dg=reviews_page.next_page_number %}#tab-reviews">Sau</a>{% endif %}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if bought_together %}
+    <section class="mt-12">
+      <h2 class="section-title mb-6">Thường được mua cùng</h2>
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">{% for product in bought_together %}{% include 'includes/product_card.html' %}{% endfor %}</div>
+    </section>
+  {% endif %}
+  {% if related %}
+    <section class="mt-12">
+      <h2 class="section-title mb-6">Sản phẩm liên quan</h2>
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">{% for product in related %}{% include 'includes/product_card.html' %}{% endfor %}</div>
+    </section>
+  {% endif %}
+</div>
+
+{# Lightbox #}
+<div id="lightbox" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/90 p-4" role="dialog" aria-label="Xem ảnh">
+  <button type="button" data-modal-close class="absolute right-4 top-4 text-white" aria-label="Đóng"><i data-lucide="x" class="h-8 w-8"></i></button>
+  <button type="button" data-lightbox-prev class="absolute left-4 text-white" aria-label="Ảnh trước"><i data-lucide="chevron-left" class="h-10 w-10"></i></button>
+  <img src="" alt="{{ product.name }}" data-lightbox-image class="max-h-[85vh] max-w-full rounded-card object-contain">
+  <button type="button" data-lightbox-next class="absolute right-4 text-white" aria-label="Ảnh sau"><i data-lucide="chevron-right" class="h-10 w-10"></i></button>
+</div>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{% static 'js/store/product-detail.js' %}"></script>{% endblock %}

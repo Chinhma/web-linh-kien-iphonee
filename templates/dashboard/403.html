@@ -1,0 +1,11 @@
+{% extends 'base_admin.html' %}
+{% block page_header %}{% endblock %}
+{% block content %}
+<div class="card mx-auto mt-10 flex max-w-lg flex-col items-center p-10 text-center">
+  <span class="flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-danger"><i data-lucide="shield-x" class="h-8 w-8"></i></span>
+  <p class="mt-4 text-5xl font-extrabold text-danger">403</p>
+  <h1 class="mt-2 text-xl font-bold">Bạn không có quyền truy cập trang này</h1>
+  <p class="mt-2 text-muted">Chức năng này chỉ dành cho Super Admin. Liên hệ quản trị viên cấp cao nếu bạn cần quyền.</p>
+  <a href="{% url 'dashboard:home' %}" class="btn-primary mt-6">Về Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-border">
+  {% for key, label, count in tabs %}<a href="?status={{ key }}" class="tab-btn {% if status == key %}is-active{% endif %}">{{ label }} <span class="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{{ count }}</span></a>{% endfor %}
+</div>
+<form method="get" data-auto-search class="mb-4 flex gap-2"><input type="hidden" name="status" value="{{ status }}"><input name="q" value="{{ q }}" placeholder="Tên, email, SĐT, nội dung" class="form-input w-72 py-2" aria-label="Tìm"><button class="btn-secondary">Tìm</button><span class="ml-auto self-center text-muted">{{ total }} tin nhắn</span></form>
+<div class="space-y-3">
+  {% for m in page_obj %}
+    <article class="card p-4 {% if not m.is_read %}border-l-4 border-l-primary{% endif %}">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2"><strong>{{ m.name }}</strong>
+          {% if m.is_read %}<span class="badge-success">Đã xử lý</span>{% else %}<span class="badge-primary">Mới</span>{% endif %}
+          <span class="text-sm text-muted"><a href="mailto:{{ m.email }}" class="link">{{ m.email }}</a>{% if m.phone %} · <a href="tel:{{ m.phone }}" class="link">{{ m.phone }}</a>{% endif %}</span></div>
+        <div class="flex items-center gap-2 text-xs text-muted">{{ m.created_at|dt }}
+          <a href="mailto:{{ m.email }}?subject=Phản hồi từ iParts Store" class="btn-ghost btn-sm"><i data-lucide="reply" class="h-4 w-4"></i>Trả lời email</a>
+          <form method="post" action="{% url 'dashboard:contact_read' m.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            {% if m.is_read %}<button class="btn-ghost btn-sm">Chuyển về Mới</button>{% else %}<button class="btn-success btn-sm"><i data-lucide="check" class="h-4 w-4"></i>Đã xử lý</button>{% endif %}</form>
+        </div>
+      </div>
+      <p class="mt-2 whitespace-pre-wrap">{{ m.message }}</p>
+    </article>
+  {% empty %}<div class="card">{% include 'dashboard/components/empty_state.html' with icon='inbox' title='Không có tin nhắn' %}</div>{% endfor %}
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

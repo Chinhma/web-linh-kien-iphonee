@@ -1,0 +1,21 @@
+{% extends 'accounts/_auth_base.html' %}
+{% block title %}Đăng nhập{% endblock %}
+{% block auth_content %}
+<h1 class="text-2xl">Đăng nhập</h1>
+<p class="mt-1 text-sm text-muted">Chào mừng bạn quay lại iParts Store.</p>
+{% if form.non_field_errors %}<div class="mt-4 rounded-xl bg-red-50 p-3 text-sm text-danger" role="alert">{{ form.non_field_errors|join:' ' }}</div>{% endif %}
+<form method="post" class="mt-6 space-y-4" data-once novalidate>
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% include 'includes/components/field.html' with field=form.identifier %}
+  {% include 'includes/components/field.html' with field=form.password password=True %}
+  <div class="flex items-center justify-between">
+    {% include 'includes/components/field.html' with field=form.remember %}
+    <a href="{% url 'accounts:password_reset' %}" class="link text-sm">Quên mật khẩu?</a>
+  </div>
+  <button type="submit" class="btn-primary btn-lg w-full">Đăng nhập</button>
+</form>
+<div class="my-5 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-border"></span>hoặc<span class="h-px flex-1 bg-border"></span></div>
+{% include 'includes/components/google_button.html' %}
+<p class="mt-6 text-center text-sm text-muted">Chưa có tài khoản? <a href="{% url 'accounts:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="link">Đăng ký ngay</a></p>
+{% endblock %}

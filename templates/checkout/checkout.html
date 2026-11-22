@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Thanh toán{% endblock %}
+
+{% block content %}
+<div class="container-x py-6">
+  {% include 'includes/components/breadcrumb.html' %}
+  <h1 class="mb-6 text-2xl md:text-3xl">Thanh toán</h1>
+  {% if form.non_field_errors %}<div class="mb-4 rounded-xl bg-red-50 p-4 text-sm text-danger">{{ form.non_field_errors|join:' ' }}</div>{% endif %}
+  <form method="post" class="grid gap-6 lg:grid-cols-[1fr_400px]" data-checkout-form novalidate autocomplete="off">
+    {% csrf_token %}
+    {{ form.idempotency_key }}
+    <div class="space-y-6">
+      {# 1. Thông tin nhận hàng #}
+      <section class="card p-5 md:p-6">
+        <h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm text-white">1</span>Thông tin nhận hàng</h2>
+        {% if addresses %}
+          <div class="mb-4 grid gap-3 sm:grid-cols-2" data-address-cards>
+            {% for a in addresses %}
+              <label class="card cursor-pointer p-4 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary-light/40">
+                <input type="radio" name="address_choice" value="{{ a.pk }}" class="sr-only" {% if a == default_address %}checked{% endif %}
+                       data-address='{"recipient_name": "{{ a.full_name|escapejs }}", "recipient_phone": "{{ a.phone|escapejs }}", "province_code": "{{ a.province_code|escapejs }}", "ward_code": "{{ a.ward_code|escapejs }}", "street_address": "{{ a.street_address|escapejs }}"}'>
+                <div class="flex items-center justify-between font-semibold">{{ a.full_name }}{% if a.is_default %}<span class="badge-primary">Mặc định</span>{% endif %}</div>
+                <p class="text-muted">{{ a.phone }}</p>
+                <p class="mt-1 text-muted">{{ a.full_address }}</p>
+              </label>
+            {% endfor %}
+            <label class="card flex cursor-pointer items-center justify-center gap-2 p-4 text-sm font-semibold text-primary has-[:checked]:border-primary has-[:checked]:bg-primary-light/40">
+              <input type="radio" name="address_choice" value="new" class="sr-only"><i data-lucide="plus" class="h-4 w-4"></i>Dùng địa chỉ khác
+            </label>
+          </div>
+        {% endif %}
+        <div class="grid gap-4 sm:grid-cols-2">
+          {% include 'includes/components/field.html' with field=form.recipient_name %}
+          {% include 'includes/components/field.html' with field=form.recipient_phone %}
+          {% include 'includes/components/field.html' with field=form.recipient_email wrapper_class='sm:col-span-2' %}
+          {% include 'includes/components/address_picker.html' with form=form prefix='checkout' wrapper_class='sm:col-span-2' %}
+          {% include 'includes/components/field.html' with field=form.street_address wrapper_class='sm:col-span-2' %}
+          {% include 'includes/components/field.html' with field=form.note wrapper_class='sm:col-span-2' %}
+          {% include 'includes/components/field.html' with field=form.save_address wrapper_class='sm:col-span-2' %}
+        </div>
+      </section>
+
+      {# 2. Vận chuyển #}
+      <section class="card p-5 md:p-6">
+        <h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm text-white">2</span>Phương thức vận chuyển</h2>
+        <div class="grid gap-3 sm:grid-cols-2">
+          {% for value, label in form.fields.shipping_method.choices %}
+            <label class="card flex cursor-pointer items-start gap-3 p-4 has-[:checked]:border-primary has-[:checked]:bg-primary-light/40">
+              <input type="radio" name="shipping_method" value="{{ value }}" class="mt-1 text-primary focus:ring-primary" {% if form.shipping_method.value == value %}checked{% endif %}>
+              <span class="flex-1">
+                <span class="block font-semibold">{{ label }}</span>
+                <span class="text-sm text-muted">{% if value == 'standard' %}{% if shipping_fees.standard %}{{ shipping_fees.standard|vnd }} · miễn phí cho đơn từ {{ store.free_shipping_threshold|vnd }}{% else %}Miễn phí{% endif %}{% else %}{{ shipping_fees.express|vnd }}{% endif %}</span>
+              </span>
+            </label>
+          {% endfor %}
+        </div>
+      </section>
+
+      {# 3. Thanh toán #}
+      <section class="card p-5 md:p-6">
+        <h2 class="mb-4 flex items-center gap-2 text-lg font-bold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm text-white">3</span>Phương thức thanh toán</h2>
+        <div class="grid gap-3">
+          {% for value, label in form.fields.payment_method.choices %}
+            {% with enabled=methods|get_item:value %}
+              <label class="card flex items-center gap-3 p-4 {% if enabled %}cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary-light/40{% else %}cursor-not-allowed opacity-50{% endif %}">
+                <input type="radio" name="payment_method" value="{{ value }}" class="text-primary focus:ring-primary" {% if not enabled %}disabled{% elif form.payment_method.value == value %}checked{% endif %}>
+                <span class="flex h-10 w-10 items-center justify-center rounded-lg {% if value == 'cod' %}bg-green-100 text-success{% elif value == 'vnpay' %}bg-blue-100 text-primary{% else %}bg-pink-100 text-pink-600{% endif %}">
+                  {% if value == 'cod' %}<i data-lucide="banknote"></i>{% elif value == 'vnpay' %}<span class="text-xs font-extrabold">VNPAY</span>{% else %}<span class="text-xs font-extrabold">MoMo</span>{% endif %}
+                </span>
+                <span class="flex-1">
+                  <span class="block font-semibold">{{ label }}</span>
+                  <span class="text-sm text-muted">{% if not enabled %}Đang bảo trì{% elif value == 'cod' %}Thanh toán tiền mặt khi nhận hàng{% else %}Thanh toán online qua cổng {{ label }} (hạn 15 phút){% endif %}</span>
+                </span>
+              </label>
+            {% endwith %}
+          {% endfor %}
+          {% for error in form.payment_method.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+        </div>
+      </section>
+    </div>
+
+    {# 4. Tóm tắt #}
+    <aside>
+      <div class="card sticky top-24 p-5">
+        <h2 class="mb-4 text-lg font-bold">Đơn hàng ({{ summary.selected_count }} sản phẩm)</h2>
+        <ul class="max-h-72 space-y-3 overflow-y-auto pr-1">
+          {% for line in summary.lines %}{% if line.valid and line.item.is_selected %}
+            <li class="flex gap-3 text-sm">
+              <span class="relative shrink-0"><img src="{{ line.item.product.image_url }}" alt="" class="h-14 w-14 rounded-lg bg-slate-50 object-cover"><span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-700 px-1 text-[11px] text-white">{{ line.item.quantity }}</span></span>
+              <span class="min-w-0 flex-1"><span class="line-clamp-2">{{ line.item.product.name }}</span><span class="text-xs text-muted">{{ line.item.quantity }} × {{ line.unit_price|vnd }}</span></span>
+              <span class="font-semibold">{{ line.line_total|vnd }}</span>
+            </li>
+          {% endif %}{% endfor %}
+        </ul>
+        <dl class="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+          <div class="flex justify-between"><dt class="text-muted">Tạm tính</dt><dd>{{ summary.subtotal|vnd }}</dd></div>
+          <div class="flex justify-between"><dt class="text-muted">Giảm giá{% if summary.coupon_code %} ({{ summary.coupon_code }}){% endif %}</dt><dd class="text-success">-{{ summary.discount|vnd }}</dd></div>
+          <div class="flex justify-between"><dt class="text-muted">Phí vận chuyển</dt><dd data-shipping-fee>{{ shipping_fees.standard|vnd }}</dd></div>
+          <div class="flex justify-between border-t border-border pt-3 text-base font-bold"><dt>Tổng thanh toán</dt><dd class="text-xl text-primary" data-grand-total></dd></div>
+        </dl>
+        <p class="mt-2 text-xs text-muted">Số tiền cuối cùng được hệ thống tính lại khi đặt hàng.</p>
+        <div class="mt-4">{% include 'includes/components/field.html' with field=form.agree extra_label='' %}<a href="{% url 'core:page' 'dieu-khoan' %}" target="_blank" class="link ml-6 text-xs">Xem điều khoản</a></div>
+        <button type="submit" class="btn-primary btn-lg mt-4 w-full" data-place-order>Đặt hàng</button>
+        <a href="{% url 'cart:cart' %}" class="mt-3 block text-center text-sm text-muted hover:text-primary">← Quay lại giỏ hàng</a>
+      </div>
+    </aside>
+  </form>
+</div>
+{{ checkout_data|json_script:'checkout-data' }}
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{% static 'js/store/checkout.js' %}"></script>{% endblock %}

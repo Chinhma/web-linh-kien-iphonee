@@ -1,0 +1,29 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}
+  <a href="{% url 'dashboard:iphone_edit' model.pk %}" class="btn-secondary"><i data-lucide="pencil" class="h-4 w-4"></i>Sửa dòng máy</a>
+  <a href="{% url 'dashboard:compat_add' %}?model={{ model.pk }}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm linh kiện tương thích cho máy này</a>
+{% endblock %}
+{% block content %}
+<div class="mb-5 grid gap-4 sm:grid-cols-3">
+  {% include 'dashboard/components/stat_card.html' with icon='calendar' label='Năm ra mắt' value=model.release_year|default:'—' %}
+  {% include 'dashboard/components/stat_card.html' with icon='badge-check' color='bg-green-100 text-success' label='Linh kiện đã xác nhận' value=verified %}
+  {% include 'dashboard/components/stat_card.html' with icon='hash' color='bg-slate-100 text-muted' label='Mã model (A-number)' value=model.model_codes|default:'—' %}
+</div>
+<div class="space-y-4">
+  {% for g in groups %}
+    <section class="card overflow-hidden">
+      <h2 class="flex items-center gap-2 border-b border-border px-5 py-3 font-bold"><i data-lucide="{{ g.category.icon }}" class="h-4 w-4 text-primary"></i>{{ g.category.name }} <span class="badge-muted">{{ g.items|length }}</span></h2>
+      <table class="data-table">
+        <tbody>{% for c in g.items %}<tr>
+          <td><div class="flex items-center gap-2"><img src="{{ c.product.image_url }}" alt="" class="h-9 w-9 rounded-lg object-cover"><div><a href="{% url 'dashboard:product_edit' c.product.pk %}" class="font-medium hover:text-primary">{{ c.product.name }}</a><div class="text-xs text-muted">{{ c.product.sku }} · tồn {{ c.product.stock_quantity }}</div></div></div></td>
+          <td>{% status_badge c.status c.get_status_display %}</td>
+          <td class="max-w-xs truncate text-muted">{{ c.note|default:'' }}</td>
+          <td class="text-right"><a href="{% url 'dashboard:compat_edit' c.pk %}" class="btn-ghost btn-sm">Sửa</a></td>
+        </tr>{% endfor %}</tbody>
+      </table>
+    </section>
+  {% empty %}
+    <div class="card">{% include 'dashboard/components/empty_state.html' with icon='git-compare-arrows' title='Chưa có linh kiện tương thích cho dòng máy này' %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

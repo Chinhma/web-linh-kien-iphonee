@@ -1,0 +1,30 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block content %}
+{% include 'dashboard/_range_filter.html' %}
+<div class="no-print mb-4 flex flex-wrap items-center gap-2">
+  <span class="text-muted">Nhóm theo:</span>
+  <a href="?{% url_replace group='day' %}" class="chip {% if group == 'day' %}is-active{% endif %}">Ngày</a>
+  <a href="?{% url_replace group='week' %}" class="chip {% if group == 'week' %}is-active{% endif %}">Tuần</a>
+  <a href="?{% url_replace group='month' %}" class="chip {% if group == 'month' %}is-active{% endif %}">Tháng</a>
+  <a href="?{% url_replace export='csv' %}" class="btn-ghost ml-auto"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a>
+</div>
+<p class="mb-4 rounded-xl bg-primary-light/50 p-3 text-xs">Kỳ trước để so sánh: {{ compare.label }}. Doanh thu ghi nhận = tổng tiền các đơn <strong>Giao thành công</strong> và <strong>Đã thanh toán</strong>, tính theo ngày giao (giờ Việt Nam).</p>
+<div class="mb-4 grid gap-4 sm:grid-cols-4">
+  <div class="card p-4"><div class="text-xs text-muted">Doanh thu</div><div class="mt-1 text-xl font-bold">{{ totals.revenue|vnd }}</div>
+    <div class="mt-1 text-xs">{% if compare.revenue_change is None %}<span class="text-muted">Kỳ trước: {{ compare.revenue|vnd }}</span>{% else %}<span class="{% if compare.revenue_change >= 0 %}text-success{% else %}text-danger{% endif %} font-semibold">{% if compare.revenue_change >= 0 %}▲{% else %}▼{% endif %} {{ compare.revenue_change }}%</span> <span class="text-muted">so với kỳ trước</span>{% endif %}</div></div>
+  <div class="card p-4"><div class="text-xs text-muted">Số đơn</div><div class="mt-1 text-xl font-bold">{{ totals.orders }}</div>
+    <div class="mt-1 text-xs">{% if compare.orders_change is None %}<span class="text-muted">Kỳ trước: {{ compare.orders }}</span>{% else %}<span class="{% if compare.orders_change >= 0 %}text-success{% else %}text-danger{% endif %} font-semibold">{% if compare.orders_change >= 0 %}▲{% else %}▼{% endif %} {{ compare.orders_change }}%</span> <span class="text-muted">so với kỳ trước</span>{% endif %}</div></div>
+  <div class="card p-4"><div class="text-xs text-muted">Giảm giá</div><div class="mt-1 text-xl font-bold">{{ totals.discount|vnd }}</div></div>
+  <div class="card p-4"><div class="text-xs text-muted">Phí ship thu</div><div class="mt-1 text-xl font-bold">{{ totals.shipping|vnd }}</div></div>
+</div>
+<section class="card mb-4 p-5"><div class="relative h-72"><canvas data-report-chart data-type="bar" data-label="Doanh thu"></canvas></div></section>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr><th>Kỳ</th><th>Số đơn</th><th>Doanh thu</th><th>Giảm giá</th><th>Phí ship</th><th>Giá trị TB/đơn</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.label }}</td><td>{{ r.orders }}</td><td class="font-semibold">{{ r.revenue|vnd }}</td><td>{{ r.discount|vnd }}</td><td>{{ r.shipping|vnd }}</td><td>{{ r.aov|vnd }}</td></tr>{% empty %}<tr><td colspan="6" class="py-10 text-center text-muted">Không có doanh thu trong kỳ.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{{ chart|json_script:'report-chart' }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'vendor/chart.umd.min.js' %}"></script><script type="module" src="{% static 'js/dashboard/report-chart.js' %}"></script>{% endblock %}

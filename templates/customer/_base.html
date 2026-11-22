@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-x py-6">
+  <div class="grid gap-6 lg:grid-cols-[260px_1fr]">
+    <aside>
+      <div class="card p-5 lg:sticky lg:top-24">
+        <div class="flex items-center gap-3">
+          {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="" class="h-12 w-12 rounded-full object-cover">
+          {% else %}<span class="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">{{ user|initials }}</span>{% endif %}
+          <div class="min-w-0"><div class="truncate font-semibold">{{ user.display_name }}</div><div class="truncate text-xs text-muted">{{ user.email }}</div></div>
+        </div>
+        <nav class="no-scrollbar -mx-1 mt-5 flex gap-1 overflow-x-auto text-sm lg:flex-col" aria-label="Tài khoản">
+          {% with a=account_active %}
+            <a href="{% url 'accounts:overview' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'overview' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="layout-grid" class="h-4 w-4"></i>Tổng quan</a>
+            <a href="{% url 'accounts:profile' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'profile' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="user" class="h-4 w-4"></i>Thông tin cá nhân</a>
+            <a href="{% url 'accounts:addresses' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'addresses' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="map-pin" class="h-4 w-4"></i>Sổ địa chỉ</a>
+            <a href="{% url 'orders:list' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'orders' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="package" class="h-4 w-4"></i>Đơn hàng của tôi</a>
+            <a href="{% url 'reviews:mine' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'reviews' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="star" class="h-4 w-4"></i>Đánh giá của tôi</a>
+            <a href="{% url 'cart:wishlist' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-100"><i data-lucide="heart" class="h-4 w-4"></i>Yêu thích</a>
+            <a href="{% url 'accounts:chat_history' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'chat' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="bot" class="h-4 w-4"></i>Lịch sử chat</a>
+            <a href="{% url 'accounts:change_password' %}" class="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 {% if a == 'password' %}bg-primary-light font-semibold text-primary{% else %}hover:bg-slate-100{% endif %}"><i data-lucide="key-round" class="h-4 w-4"></i>{% if user.has_usable_password %}Đổi mật khẩu{% else %}Đặt mật khẩu{% endif %}</a>
+          {% endwith %}
+          <form method="post" action="{% url 'accounts:logout' %}" class="shrink-0">{% csrf_token %}<button type="submit" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-danger hover:bg-red-50"><i data-lucide="log-out" class="h-4 w-4"></i>Đăng xuất</button></form>
+        </nav>
+      </div>
+    </aside>
+    <section class="min-w-0">{% block account_content %}{% endblock %}</section>
+  </div>
+</div>
+{% endblock %}

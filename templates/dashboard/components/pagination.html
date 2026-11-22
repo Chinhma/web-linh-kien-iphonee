@@ -1,0 +1,28 @@
+{# Phân trang Admin: "Hiển thị 1–20 trong 135" + chọn 20/50/100 dòng/trang + số trang. Biến: page_obj, per_page #}
+{% if page_obj.paginator.count %}
+<div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+  <div class="flex items-center gap-3">
+    <span>Hiển thị <strong class="text-text">{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> trong <strong class="text-text">{{ page_obj.paginator.count }}</strong></span>
+    <form method="get" class="flex items-center gap-1.5">
+      {% for key, values in request.GET.lists %}{% if key != 'per_page' and key != 'page' %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+      <select name="per_page" data-autosubmit class="form-input w-auto py-1 text-xs" aria-label="Số dòng mỗi trang">
+        <option value="20" {% if per_page == 20 %}selected{% endif %}>20 dòng/trang</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 dòng/trang</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100 dòng/trang</option>
+      </select>
+    </form>
+  </div>
+  {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="flex flex-wrap items-center gap-1" aria-label="Phân trang">
+      {% if page_obj.has_previous %}<a href="?{% url_replace page=page_obj.previous_page_number %}" class="icon-btn h-8 w-8 border border-border bg-white" aria-label="Trang trước"><i data-lucide="chevron-left" class="h-4 w-4"></i></a>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}<span class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 font-semibold text-white">{{ num }}</span>
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}<a href="?{% url_replace page=num %}" class="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-white px-2 text-text hover:border-primary">{{ num }}</a>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}<a href="?{% url_replace page=num %}" class="flex h-8 min-w-8 items-center justify-center rounded-lg border border-border bg-white px-2 text-text hover:border-primary">{{ num }}</a>
+        {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}<span class="px-1">…</span>{% endif %}
+      {% endfor %}
+      {% if page_obj.has_next %}<a href="?{% url_replace page=page_obj.next_page_number %}" class="icon-btn h-8 w-8 border border-border bg-white" aria-label="Trang sau"><i data-lucide="chevron-right" class="h-4 w-4"></i></a>{% endif %}
+    </nav>
+  {% endif %}
+</div>
+{% endif %}

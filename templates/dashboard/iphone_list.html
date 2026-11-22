@@ -1,0 +1,28 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:iphone_add' %}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm dòng máy</a>{% endblock %}
+{% block content %}
+<div class="space-y-6">
+  {% for g in groups %}
+    <section>
+      <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{{ g.label }}</h2>
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {% for m in g.models %}
+          <div class="card flex items-center gap-3 p-4 {% if not m.is_active %}opacity-60{% endif %}">
+            <span class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">{% if m.image %}<img src="{{ m.image.url }}" alt="" class="h-full w-full object-cover">{% else %}<i data-lucide="smartphone" class="h-6 w-6 text-muted"></i>{% endif %}</span>
+            <div class="min-w-0 flex-1">
+              <a href="{% url 'dashboard:iphone_detail' m.pk %}" class="block truncate font-semibold hover:text-primary">{{ m.name }}</a>
+              <div class="text-xs text-muted">{{ m.release_year|default:'—' }} · <span class="{% if m.verified_total %}text-success{% else %}text-warning{% endif %}">{{ m.verified_total }} linh kiện đã xác nhận</span></div>
+            </div>
+            <div class="flex flex-col items-end gap-1.5">
+              {% include 'dashboard/components/switch.html' with url_model='iphone-active' obj=m on=m.is_active %}
+              <a href="{% url 'dashboard:iphone_edit' m.pk %}" class="text-xs text-muted hover:text-primary">Sửa</a>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% empty %}
+    <div class="card">{% include 'dashboard/components/empty_state.html' with icon='smartphone' title='Chưa có dòng iPhone' action_url='/quan-tri/dong-iphone/them/' action_text='Thêm dòng máy' %}</div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+{% include 'dashboard/_range_filter.html' %}
+<div class="mb-3 flex justify-end"><a href="?{% url_replace export='csv' %}" class="btn-ghost"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a></div>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr>
+      <th>{% include 'dashboard/_sort.html' with key='product_name' label='Sản phẩm' %}</th>
+      <th>{% include 'dashboard/_sort.html' with key='qty' label='SL bán' %}</th>
+      <th>{% include 'dashboard/_sort.html' with key='revenue' label='Doanh thu' %}</th>
+      <th>{% include 'dashboard/_sort.html' with key='profit' label='Lợi nhuận gộp ước tính' %}</th>
+      <th>{% include 'dashboard/_sort.html' with key='rating_avg' label='Điểm TB' %}</th><th>Số đánh giá</th>
+    </tr></thead>
+    <tbody>{% for r in rows %}<tr><td><div class="font-medium">{{ r.product_name }}</div><div class="text-xs text-muted">{{ r.product_sku }}</div></td><td>{{ r.qty }}</td><td class="font-semibold">{{ r.revenue|vnd }}</td><td class="{% if r.profit < 0 %}text-danger{% else %}text-success{% endif %}">{{ r.profit|vnd }}</td><td>{{ r.rating_avg|floatformat:1 }}</td><td>{{ r.rating_count }}</td></tr>{% empty %}<tr><td colspan="6" class="py-10 text-center text-muted">Không có sản phẩm bán được trong kỳ.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+<p class="mt-2 text-xs text-muted">Doanh thu sản phẩm tính theo thành tiền dòng hàng (trước giảm giá coupon). Lợi nhuận gộp = doanh thu − giá nhập hiện tại × số lượng.</p>
+<section class="card mt-6 p-5">
+  <h3 class="mb-3 font-bold">Sản phẩm đang bán nhưng không bán được trong kỳ ({{ unsold|length }})</h3>
+  <ul class="grid gap-1 sm:grid-cols-2">{% for p in unsold %}<li class="truncate">{{ p.sku }} – {{ p.name }}</li>{% empty %}<li class="text-muted">Không có.</li>{% endfor %}</ul>
+</section>
+{% endblock %}

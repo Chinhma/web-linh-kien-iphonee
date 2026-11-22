@@ -1,0 +1,25 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="?{% url_replace export='csv' %}" class="btn-secondary"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a><button type="button" data-print class="btn-ghost"><i data-lucide="printer" class="h-4 w-4"></i>In</button>{% endblock %}
+{% block content %}
+{% include 'dashboard/_range_filter.html' %}
+<div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/components/stat_card.html' with icon='users' label='Tổng khách hàng' value=stats.total %}
+  {% include 'dashboard/components/stat_card.html' with icon='user-plus' color='bg-green-100 text-success' label='Khách mới trong kỳ' value=stats.new %}
+  {% include 'dashboard/components/stat_card.html' with icon='shopping-bag' color='bg-violet-100 text-violet-600' label='Khách đã mua hàng' value=stats.buyers %}
+  {% include 'dashboard/components/stat_card.html' with icon='repeat' color='bg-amber-100 text-warning' label='Tỉ lệ khách mua lại' value=stats.repeat_rate|stringformat:'s'|add:'%' %}
+</div>
+<div class="grid gap-4 xl:grid-cols-2">
+  <section class="card p-5"><h2 class="mb-3 font-bold">Khách đăng ký mới theo tháng (12 tháng)</h2><div class="relative h-72"><canvas data-chart="new" data-type="bar"></canvas></div></section>
+  <section class="card overflow-x-auto">
+    <h2 class="px-5 pt-5 font-bold">Top 10 khách chi tiêu nhiều nhất</h2>
+    <table class="data-table mt-2">
+      <thead><tr><th>Khách hàng</th><th>Đơn đã giao</th><th class="text-right">Tổng chi tiêu</th></tr></thead>
+      <tbody>{% for u in top %}<tr><td><a href="{% url 'dashboard:customer_detail' u.pk %}" class="link">{{ u.display_name }}</a><div class="text-xs text-muted">{{ u.email }}</div></td><td>{{ u.n }}</td><td class="text-right font-bold">{{ u.spent|vnd }}</td></tr>
+      {% empty %}<tr><td colspan="3">{% include 'dashboard/components/empty_state.html' with title='Chưa có khách mua hàng' %}</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+</div>
+{{ chart_data|json_script:'chart-data' }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'vendor/chart.umd.min.js' %}"></script><script type="module" src="{% static 'js/dashboard/simple-charts.js' %}"></script>{% endblock %}

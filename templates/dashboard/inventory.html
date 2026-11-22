@@ -1,0 +1,41 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}
+  <a href="{% url 'dashboard:inventory_history' %}" class="btn-secondary"><i data-lucide="history" class="h-4 w-4"></i>Lịch sử nhập xuất</a>
+  <a href="{% url 'dashboard:inventory_stocktake' %}" class="btn-secondary"><i data-lucide="clipboard-check" class="h-4 w-4"></i>Điều chỉnh kiểm kê</a>
+  <a href="{% url 'dashboard:inventory_import' %}" class="btn-primary"><i data-lucide="package-plus" class="h-4 w-4"></i>Nhập kho</a>
+{% endblock %}
+{% block content %}
+<div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/components/stat_card.html' with icon='wallet' label='Tổng giá trị tồn kho' value=totals.value|default:0|vnd sub='Tồn × giá nhập' %}
+  {% include 'dashboard/components/stat_card.html' with icon='boxes' color='bg-violet-100 text-violet-600' label='Tổng số lượng tồn' value=totals.qty|default:0 %}
+  {% include 'dashboard/components/stat_card.html' with icon='alert-triangle' color='bg-amber-100 text-warning' label='Sắp hết hàng' value=totals.low url='?state=low' %}
+  {% include 'dashboard/components/stat_card.html' with icon='package-x' color='bg-red-100 text-danger' label='Hết hàng' value=totals.out url='?state=out' %}
+</div>
+<form method="get" class="card mb-4 flex flex-wrap items-center gap-2 p-3">
+  <div class="relative"><i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i><input name="q" value="{{ q }}" data-auto-search placeholder="Tên hoặc SKU" class="form-input w-64 py-2 pl-9" aria-label="Tìm"></div>
+  <select name="state" data-autosubmit class="form-input w-auto py-2" aria-label="Trạng thái kho">
+    <option value="">Mọi trạng thái kho</option><option value="low" {% if request.GET.state == 'low' %}selected{% endif %}>Sắp hết</option><option value="out" {% if request.GET.state == 'out' %}selected{% endif %}>Hết hàng</option>
+  </select>
+  {% if request.GET %}<a href="?" class="btn-ghost btn-sm">Xóa bộ lọc</a>{% endif %}
+  <span class="ml-auto text-muted">{{ total }} sản phẩm</span>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr><th>Ảnh</th><th>{% include 'dashboard/_sort.html' with key='name' label='Sản phẩm' %}</th><th>{% include 'dashboard/_sort.html' with key='stock' label='Tồn' %}</th><th>Ngưỡng</th><th>Trạng thái</th><th>Giá nhập</th><th>{% include 'dashboard/_sort.html' with key='value' label='Giá trị tồn' %}</th><th class="text-right">Hành động</th></tr></thead>
+    <tbody>{% for p in page_obj %}<tr>
+      <td><img src="{{ p.image_url }}" alt="" class="h-10 w-10 rounded-lg object-cover"></td>
+      <td data-label="Sản phẩm" class="max-w-xs"><a href="{% url 'dashboard:product_edit' p.pk %}" class="line-clamp-2 font-medium hover:text-primary">{{ p.name }}</a><div class="text-xs text-muted">{{ p.sku }} · {{ p.category.name }}</div></td>
+      <td data-label="Tồn" class="text-base font-bold">{{ p.stock_quantity }}</td>
+      <td data-label="Ngưỡng">{{ p.low_stock_threshold }}</td>
+      <td data-label="Trạng thái"><span class="badge-{{ p.stock_status|badge_color }}">{{ p.stock_label }}</span></td>
+      <td data-label="Giá nhập">{{ p.cost_price|vnd }}</td>
+      <td data-label="Giá trị tồn">{{ p.stock_value|vnd }}</td>
+      <td class="whitespace-nowrap text-right">
+        <a href="{% url 'dashboard:inventory_import' %}?product={{ p.pk }}" class="btn-ghost btn-sm text-success" title="Nhập kho"><i data-lucide="package-plus" class="h-4 w-4"></i>Nhập</a>
+        <a href="{% url 'dashboard:inventory_stocktake' %}?product={{ p.pk }}" class="btn-ghost btn-sm" title="Điều chỉnh kiểm kê"><i data-lucide="clipboard-check" class="h-4 w-4"></i>Điều chỉnh</a>
+      </td></tr>
+    {% empty %}<tr><td colspan="8">{% include 'dashboard/components/empty_state.html' with icon='package' title='Không có sản phẩm phù hợp' %}</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

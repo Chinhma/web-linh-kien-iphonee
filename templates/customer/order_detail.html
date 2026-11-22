@@ -1,0 +1,132 @@
+{% extends 'customer/_base.html' %}
+{% load static %}
+{% block title %}Đơn hàng {{ order.code }}{% endblock %}
+{% block account_content %}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <a href="{% url 'orders:list' %}" class="text-sm text-muted hover:text-primary">← Đơn hàng của tôi</a>
+    <h1 class="mt-1 flex flex-wrap items-center gap-2 text-2xl">Đơn {{ order.code }} {% status_badge order.status order.get_status_display %}</h1>
+    <p class="text-sm text-muted">Đặt lúc {{ order.created_at|dt }}</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% if order.can_retry_payment %}<a href="{% url 'payments:start' order.code %}" class="btn-primary">Thanh toán lại</a>{% endif %}
+    {% if can_cancel %}<button type="button" class="btn-danger" data-modal-open="cancel-modal">Hủy đơn</button>{% endif %}
+    <form method="post" action="{% url 'orders:reorder' order.code %}">{% csrf_token %}<button type="submit" class="btn-secondary"><i data-lucide="rotate-ccw" class="h-4 w-4"></i>Mua lại</button></form>
+  </div>
+</div>
+
+{# Timeline trạng thái #}
+<div class="card mb-6 p-5">
+  {% if order.status == 'cancelled' %}
+    <div class="flex items-start gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-800">
+      <i data-lucide="x-circle" class="h-5 w-5 shrink-0"></i>
+      <div><strong>Đơn hàng đã bị hủy</strong> lúc {{ order.cancelled_at|dt }} bởi {{ order.get_cancelled_by_display|lower }}.{% if order.cancel_reason %}<br>Lý do: {{ order.cancel_reason }}{% endif %}</div>
+    </div>
+  {% else %}
+    <ol class="grid grid-cols-5 gap-1">
+      {% for step in timeline %}
+        <li class="relative flex flex-col items-center text-center">
+          {% if not forloop.first %}<span class="absolute right-1/2 top-4 h-0.5 w-full {% if step.done %}bg-primary{% else %}bg-border{% endif %}"></span>{% endif %}
+          <span class="relative z-10 flex h-8 w-8 items-center justify-center rounded-full {% if step.done %}bg-primary text-white{% else %}border-2 border-border bg-white text-muted{% endif %}"><i data-lucide="{% if step.done %}check{% else %}circle{% endif %}" class="h-4 w-4"></i></span>
+          <span class="mt-2 text-xs font-semibold {% if not step.done %}text-muted{% endif %}">{{ step.label }}</span>
+          {% if step.done and step.time %}<span class="text-[10px] text-muted">{{ step.time|dt }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</div>
+
+<div class="grid gap-6 md:grid-cols-2">
+  <div class="card p-5 text-sm">
+    <h2 class="mb-3 font-bold">Thông tin nhận hàng</h2>
+    <p class="font-semibold">{{ order.recipient_name }} · {{ order.recipient_phone }}</p>
+    <p class="text-muted">{{ order.recipient_email }}</p>
+    <p class="mt-1">{{ order.full_address }}</p>
+    {% if order.note %}<p class="mt-2 text-muted">Ghi chú: {{ order.note }}</p>{% endif %}
+    <p class="mt-2 text-muted">{{ order.get_shipping_method_display }}</p>
+  </div>
+  <div class="card p-5 text-sm">
+    <h2 class="mb-3 font-bold">Thanh toán</h2>
+    <p>{{ order.get_payment_method_display }}</p>
+    <p class="mt-1">{% status_badge order.payment_status order.get_payment_status_display %}</p>
+    {% if order.paid_at %}<p class="mt-1 text-muted">Thanh toán lúc {{ order.paid_at|dt }}</p>{% endif %}
+    {% if order.can_retry_payment %}<p class="mt-1 text-xs text-warning">Hạn thanh toán: {{ order.payment_expires_at|dt }}</p>{% endif %}
+  </div>
+</div>
+
+<div class="card mt-6 overflow-hidden">
+  <h2 class="border-b border-border px-5 py-3 font-bold">Sản phẩm</h2>
+  <ul>
+    {% for item in order.items.all %}
+      <li class="flex flex-wrap items-center gap-3 border-b border-border p-4 last:border-0">
+        {% if item.product_image %}<img src="{{ MEDIA_URL }}{{ item.product_image }}" alt="" class="h-16 w-16 rounded-lg bg-slate-50 object-cover">{% endif %}
+        <div class="min-w-0 flex-1">
+          {% if item.product %}<a href="{{ item.product.get_absolute_url }}" class="font-semibold hover:text-primary">{{ item.product_name }}</a>{% else %}<span class="font-semibold">{{ item.product_name }}</span>{% endif %}
+          <p class="text-xs text-muted">SKU {{ item.product_sku }} · {{ item.quantity }} × {{ item.unit_price|vnd }}</p>
+        </div>
+        <span class="font-semibold">{{ item.line_total|vnd }}</span>
+        {% if order.status == 'delivered' %}
+          {% if item.review %}
+            <span class="badge-muted">Đã đánh giá · {{ item.review.get_status_display }}</span>
+          {% elif item.product %}
+            <button type="button" class="btn-secondary btn-sm" data-review-item="{{ item.pk }}" data-review-name="{{ item.product_name }}">Đánh giá</button>
+          {% endif %}
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  <dl class="space-y-2 border-t border-border bg-slate-50 p-5 text-sm">
+    <div class="flex justify-between"><dt class="text-muted">Tạm tính</dt><dd>{{ order.subtotal|vnd }}</dd></div>
+    <div class="flex justify-between"><dt class="text-muted">Giảm giá{% if order.coupon_code %} ({{ order.coupon_code }}){% endif %}</dt><dd class="text-success">-{{ order.discount_amount|vnd }}</dd></div>
+    <div class="flex justify-between"><dt class="text-muted">Phí vận chuyển</dt><dd>{% if order.shipping_fee %}{{ order.shipping_fee|vnd }}{% else %}Miễn phí{% endif %}</dd></div>
+    <div class="flex justify-between text-base font-bold"><dt>Tổng thanh toán</dt><dd class="text-primary">{{ order.total|vnd }}</dd></div>
+  </dl>
+</div>
+
+<div class="card mt-6 p-5">
+  <h2 class="mb-3 font-bold">Lịch sử trạng thái</h2>
+  <ol class="space-y-3 border-l-2 border-border pl-5 text-sm">
+    {% for h in order.status_history.all %}
+      <li class="relative"><span class="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-primary"></span><span class="font-semibold">{{ h.to_status_label }}</span> <span class="text-xs text-muted">· {{ h.created_at|dt }}</span>{% if h.note %}<p class="text-muted">{{ h.note }}</p>{% endif %}</li>
+    {% endfor %}
+  </ol>
+</div>
+
+{% if can_cancel %}
+<div id="cancel-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="cancel-title">
+  <form method="post" action="{% url 'orders:cancel' order.code %}" class="relative w-full max-w-md rounded-modal bg-white p-6" data-once>
+    {% csrf_token %}
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="cancel-title" class="text-lg font-bold">Hủy đơn {{ order.code }}</h2>
+    <p class="mt-1 text-sm text-muted">Vui lòng chọn lý do hủy đơn:</p>
+    <div class="mt-4 space-y-2">
+      {% for r in cancel_reasons %}
+        <label class="flex items-center gap-2 rounded-lg border border-border p-3 text-sm has-[:checked]:border-primary"><input type="radio" name="reason" value="{{ r }}" required class="text-primary" {% if forloop.first %}checked{% endif %}>{{ r }}</label>
+      {% endfor %}
+      <textarea name="reason_other" rows="2" maxlength="300" class="form-input" placeholder="Nhập lý do khác (nếu có)"></textarea>
+    </div>
+    <div class="mt-6 flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Không hủy</button><button type="submit" class="btn-danger">Xác nhận hủy đơn</button></div>
+  </form>
+</div>
+{% endif %}
+
+<div id="review-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="review-title">
+  <form method="post" action="{% url 'reviews:create' %}" class="relative w-full max-w-md rounded-modal bg-white p-6" data-once>
+    {% csrf_token %}
+    <input type="hidden" name="order_item_id" data-review-input>
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="review-title" class="text-lg font-bold">Đánh giá sản phẩm</h2>
+    <p class="mt-1 text-sm text-muted" data-review-product></p>
+    <fieldset class="mt-4 flex flex-row-reverse justify-end gap-1" aria-label="Chọn số sao">
+      {% for n in '54321' %}
+        <input type="radio" id="mrate{{ n }}" name="rating" value="{{ n }}" class="peer sr-only" required {% if n == '5' %}checked{% endif %}>
+        <label for="mrate{{ n }}" class="cursor-pointer text-3xl text-border hover:text-warning peer-checked:text-warning [&:hover~label]:text-warning">★</label>
+      {% endfor %}
+    </fieldset>
+    <textarea name="content" rows="4" minlength="10" maxlength="1000" required class="form-input mt-3" placeholder="Chia sẻ trải nghiệm của bạn (10–1000 ký tự)"></textarea>
+    <div class="mt-6 flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Gửi đánh giá</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/review-modal.js' %}"></script>{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  <select name="product" class="form-input w-64 py-2" aria-label="Sản phẩm"><option value="">Tất cả sản phẩm</option>{% for p in products %}<option value="{{ p.pk }}" {% if request.GET.product == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.name|truncatechars:50 }}</option>{% endfor %}</select>
+  <select name="type" class="form-input w-auto py-2" aria-label="Loại"><option value="">Loại giao dịch</option>{% for v, l in types %}<option value="{{ v }}" {% if request.GET.type == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label class="text-xs text-muted">Từ<input type="date" name="from" value="{{ request.GET.from }}" class="form-input mt-1 py-1.5"></label>
+  <label class="text-xs text-muted">Đến<input type="date" name="to" value="{{ request.GET.to }}" class="form-input mt-1 py-1.5"></label>
+  <button class="btn-secondary">Lọc</button>
+  <a href="?{% url_replace export='csv' %}" class="btn-ghost"><i data-lucide="download" class="h-4 w-4"></i>CSV</a>
+  <span class="ml-auto text-muted">{{ total }} giao dịch</span>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr><th>{% include 'dashboard/_sort.html' with key='time' label='Thời gian' %}</th><th>Sản phẩm</th><th>Loại</th><th>{% include 'dashboard/_sort.html' with key='change' label='Thay đổi' %}</th><th>Tồn trước → sau</th><th>Đơn hàng</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead>
+    <tbody>{% for t in page_obj %}<tr>
+      <td class="whitespace-nowrap text-muted">{{ t.created_at|dt }}</td><td class="max-w-xs truncate">{{ t.product.name }}</td><td><span class="badge-muted">{{ t.get_type_display }}</span></td>
+      <td class="font-bold {% if t.quantity_change > 0 %}text-success{% else %}text-danger{% endif %}">{% if t.quantity_change > 0 %}+{% endif %}{{ t.quantity_change }}</td>
+      <td class="whitespace-nowrap">{{ t.stock_before }} → {{ t.stock_after }}</td>
+      <td>{% if t.order %}<a href="{% url 'dashboard:order_detail' t.order.code %}" class="link">{{ t.order.code }}</a>{% else %}—{% endif %}</td>
+      <td>{{ t.created_by.display_name|default:'Hệ thống' }}</td><td class="max-w-[220px] truncate text-muted" title="{{ t.note }}">{{ t.note }}</td></tr>
+    {% empty %}<tr><td colspan="8" class="py-10 text-center text-muted">Chưa có giao dịch.</td></tr>{% endfor %}</tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="?{% url_replace export='csv' %}" class="btn-secondary"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a>{% endblock %}
+{% block content %}
+<div class="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-border">
+  {% for key, label, count in tabs %}
+    <a href="?{% if key %}status={{ key }}{% endif %}" class="tab-btn {% if request.GET.status|default:'' == key %}is-active{% endif %}">{{ label }} <span class="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{{ count }}</span></a>
+  {% endfor %}
+</div>
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  {% if request.GET.status %}<input type="hidden" name="status" value="{{ request.GET.status }}">{% endif %}
+  <div class="relative"><i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i><input name="q" value="{{ q }}" data-auto-search placeholder="Mã đơn, tên, SĐT, email" class="form-input w-64 py-2 pl-9" aria-label="Tìm"></div>
+  <select name="payment_method" class="form-input w-auto py-2" aria-label="Phương thức"><option value="">Phương thức TT</option>{% for v, l in payment_methods %}<option value="{{ v }}" {% if request.GET.payment_method == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="payment_status" class="form-input w-auto py-2" aria-label="Trạng thái thanh toán"><option value="">Trạng thái TT</option>{% for v, l in payment_statuses %}<option value="{{ v }}" {% if request.GET.payment_status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label class="text-xs text-muted">Từ<input type="date" name="from" value="{{ request.GET.from }}" class="form-input mt-1 py-1.5"></label>
+  <label class="text-xs text-muted">Đến<input type="date" name="to" value="{{ request.GET.to }}" class="form-input mt-1 py-1.5"></label>
+  <button class="btn-secondary">Lọc</button>
+  {% if request.GET.q or request.GET.payment_method or request.GET.payment_status or request.GET.from or request.GET.to %}<a href="?{% if request.GET.status %}status={{ request.GET.status }}{% endif %}" class="btn-ghost btn-sm">Xóa bộ lọc</a>{% endif %}
+  <span class="ml-auto text-sm text-muted">{{ total }} đơn hàng</span>
+</form>
+<form id="bulk-form" method="post" action="{% url 'dashboard:order_bulk' %}" data-bulk-form>
+  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div data-bulk-bar="bulk-form" hidden class="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-footer-bg px-4 py-2.5 text-sm text-white">
+    <span>Đã chọn <strong data-bulk-count>0</strong> đơn:</span>
+    <button type="submit" name="action" value="confirm" class="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Xác nhận các đơn đã chọn</button>
+    <button type="submit" name="action" value="export" class="rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Xuất CSV</button>
+  </div>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr>
+      <th class="w-8"><input type="checkbox" class="form-check" data-check-all="bulk-form" aria-label="Chọn tất cả"></th>
+      <th>{% include 'dashboard/_sort.html' with key='code' label='Mã đơn' %}</th><th>Khách hàng</th><th>SĐT nhận</th>
+      <th>{% include 'dashboard/_sort.html' with key='date' label='Ngày đặt' %}</th><th>SL</th>
+      <th>{% include 'dashboard/_sort.html' with key='total' label='Tổng tiền' %}</th><th>Thanh toán</th><th>Trạng thái</th><th></th>
+    </tr></thead>
+    <tbody>
+      {% for o in page_obj %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ o.code }}" form="bulk-form" class="form-check" aria-label="Chọn {{ o.code }}"></td>
+          <td data-label="Mã đơn"><a href="{% url 'dashboard:order_detail' o.code %}" class="link font-semibold">{{ o.code }}</a></td>
+          <td><div class="font-medium">{{ o.recipient_name }}</div><div class="text-xs text-muted">{{ o.user.email }}</div></td>
+          <td>{{ o.recipient_phone }}</td>
+          <td class="whitespace-nowrap text-muted">{{ o.created_at|dt }}</td>
+          <td>{{ o.items_count }}</td>
+          <td class="whitespace-nowrap font-semibold">{{ o.total|vnd }}</td>
+          <td><div class="text-xs text-muted">{{ o.get_payment_method_display }}</div>{% status_badge o.payment_status o.get_payment_status_display %}</td>
+          <td>{% status_badge o.status o.get_status_display %}</td>
+          <td><a href="{% url 'dashboard:order_detail' o.code %}" class="btn-ghost btn-sm" title="Xem"><i data-lucide="eye" class="h-4 w-4"></i></a></td>
+        </tr>
+      {% empty %}<tr><td colspan="10">{% include 'dashboard/components/empty_state.html' with icon='shopping-bag' title='Không có đơn hàng phù hợp' %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

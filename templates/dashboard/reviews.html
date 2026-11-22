@@ -1,0 +1,66 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="no-scrollbar mb-4 flex gap-1 overflow-x-auto border-b border-border">
+  {% for key, label, count in tabs %}<a href="?status={{ key }}" class="tab-btn {% if status == key %}is-active{% endif %}">{{ label }} <span class="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{{ count }}</span></a>{% endfor %}
+  {% if avg_rating %}<span class="ml-auto self-center whitespace-nowrap px-3 text-sm text-muted">Điểm TB (đã duyệt): <strong class="text-amber-500">{{ avg_rating }}★</strong></span>{% endif %}
+</div>
+
+<form method="get" data-auto-search class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  <input type="hidden" name="status" value="{{ status }}">
+  <input name="q" value="{{ q }}" placeholder="Nội dung, sản phẩm, tên/email khách" class="form-input w-72 py-2" aria-label="Tìm">
+  <select name="rating" class="form-input w-auto py-2" data-autosubmit aria-label="Số sao"><option value="">Tất cả số sao</option>{% for n in '54321' %}<option value="{{ n }}" {% if request.GET.rating == n %}selected{% endif %}>{{ n }} sao</option>{% endfor %}</select>
+  {% if request.GET.product %}<input type="hidden" name="product" value="{{ request.GET.product }}"><a href="?status={{ status }}" class="badge-primary">Đang lọc theo 1 sản phẩm ✕</a>{% endif %}
+  <button class="btn-secondary">Lọc</button>
+  <label class="ml-auto flex items-center gap-2 text-sm text-muted"><input type="checkbox" class="form-check" data-check-all="bulk-form">Chọn tất cả trên trang</label>
+</form>
+
+<form id="bulk-form" method="post" action="{% url 'dashboard:review_action' %}" data-bulk-form>
+  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div data-bulk-bar="bulk-form" hidden class="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-footer-bg px-4 py-2.5 text-sm text-white">
+    <span>Đã chọn <strong data-bulk-count>0</strong> đánh giá:</span>
+    <button type="submit" name="action" value="approved" class="btn-sm rounded-lg bg-success px-3 py-1.5 font-semibold">Duyệt</button>
+    <button type="submit" name="action" value="hidden" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 font-semibold">Ẩn</button>
+    <button type="submit" name="action" value="delete" class="btn-sm rounded-lg bg-danger px-3 py-1.5 font-semibold">Xóa</button>
+  </div>
+</form>
+
+<div class="space-y-3">
+  {% for r in page_obj %}
+    <article class="card p-4">
+      <div class="flex gap-3">
+        <input type="checkbox" name="ids" value="{{ r.pk }}" form="bulk-form" class="form-check mt-1" aria-label="Chọn đánh giá">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span class="text-amber-500" aria-label="{{ r.rating }} sao">{% for i in '12345' %}{% if forloop.counter <= r.rating %}★{% else %}<span class="text-slate-300">★</span>{% endif %}{% endfor %}</span>
+            <strong>{{ r.user.display_name }}</strong><span class="text-xs text-muted">{{ r.user.email }}</span>
+            <span class="text-xs text-muted">· {{ r.created_at|dt }}</span>
+            {% status_badge r.status r.get_status_display %}
+          </div>
+          <div class="mt-1 text-sm">
+            <a href="?status={{ status }}&product={{ r.product_id }}" class="font-medium hover:text-primary" title="Lọc theo sản phẩm này">{{ r.product.name }}</a>
+            {% if r.order_item %}<span class="text-muted">· đơn <a href="{% url 'dashboard:order_detail' r.order_item.order.code %}" class="link">{{ r.order_item.order.code }}</a></span>{% endif %}
+          </div>
+          <p class="mt-2 whitespace-pre-line">{{ r.content }}</p>
+          {% if r.admin_reply %}<div class="mt-2 rounded-lg border-l-4 border-primary bg-primary-light/50 p-2.5 text-sm"><strong>Cửa hàng phản hồi:</strong> {{ r.admin_reply }}</div>{% endif %}
+          <details class="mt-2">
+            <summary class="cursor-pointer text-sm text-primary">{% if r.admin_reply %}Sửa phản hồi{% else %}Trả lời{% endif %}</summary>
+            <form method="post" action="{% url 'dashboard:review_action' %}" class="mt-2 flex flex-col gap-2 sm:flex-row">{% csrf_token %}
+              <input type="hidden" name="ids" value="{{ r.pk }}"><input type="hidden" name="action" value="reply"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <textarea name="reply" rows="2" maxlength="1000" placeholder="Phản hồi công khai của cửa hàng" class="form-input" aria-label="Phản hồi">{{ r.admin_reply }}</textarea>
+              <button class="btn-primary btn-sm self-start">Lưu phản hồi</button>
+            </form>
+          </details>
+        </div>
+        <div class="flex shrink-0 flex-col gap-1.5">
+          {% if r.status != 'approved' %}<form method="post" action="{% url 'dashboard:review_action' %}">{% csrf_token %}<input type="hidden" name="ids" value="{{ r.pk }}"><input type="hidden" name="action" value="approved"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn-success btn-sm w-full"><i data-lucide="check" class="h-4 w-4"></i>Duyệt</button></form>{% endif %}
+          {% if r.status != 'hidden' %}<form method="post" action="{% url 'dashboard:review_action' %}">{% csrf_token %}<input type="hidden" name="ids" value="{{ r.pk }}"><input type="hidden" name="action" value="hidden"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn-secondary btn-sm w-full"><i data-lucide="eye-off" class="h-4 w-4"></i>Ẩn</button></form>{% endif %}
+          <form method="post" action="{% url 'dashboard:review_action' %}" data-confirm="Xóa vĩnh viễn đánh giá này?" data-confirm-ok="Xóa">{% csrf_token %}<input type="hidden" name="ids" value="{{ r.pk }}"><input type="hidden" name="action" value="delete"><input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn-ghost btn-sm w-full text-danger"><i data-lucide="trash-2" class="h-4 w-4"></i>Xóa</button></form>
+        </div>
+      </div>
+    </article>
+  {% empty %}
+    <div class="card">{% include 'dashboard/components/empty_state.html' with icon='star' title='Không có đánh giá' %}</div>
+  {% endfor %}
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

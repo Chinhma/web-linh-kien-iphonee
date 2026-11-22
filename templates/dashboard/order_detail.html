@@ -1,0 +1,116 @@
+{% extends 'base_admin.html' %}
+{% block page_header %}
+<div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+  <div>
+    <h1 class="flex flex-wrap items-center gap-2 text-xl font-bold md:text-2xl">Đơn {{ order.code }} {% status_badge order.status order.get_status_display %} {% status_badge order.payment_status order.get_payment_status_display %}</h1>
+    <p class="text-sm text-muted">Đặt lúc {{ order.created_at|dt }} · {{ order.get_payment_method_display }}</p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    {% for status, label in actions %}
+      <form method="post" action="{% url 'dashboard:order_change_status' order.code %}"
+            data-confirm="{{ label }} cho đơn {{ order.code }}?{% if status == 'cancelled' %} Hệ thống sẽ hoàn kho và hoàn lượt mã giảm giá.{% endif %}" data-confirm-title="{{ label }}"
+            data-confirm-ok="{{ label }}" data-confirm-danger="{% if status == 'cancelled' %}1{% else %}0{% endif %}"
+            data-confirm-note="{% if status == 'cancelled' %}required{% else %}1{% endif %}"
+            data-confirm-note-placeholder="{% if status == 'cancelled' %}Lý do hủy (bắt buộc){% else %}Ghi chú (không bắt buộc){% endif %}">
+        {% csrf_token %}<input type="hidden" name="status" value="{{ status }}">
+        <button type="submit" class="{% if status == 'cancelled' %}btn-danger{% else %}btn-primary{% endif %}">{{ label }}</button>
+      </form>
+    {% endfor %}
+    {% if order.payment_status == 'refund_pending' %}<a href="{% url 'dashboard:payment_refunds' %}" class="btn-secondary">Đánh dấu đã hoàn tiền</a>{% endif %}
+    <a href="{% url 'dashboard:order_print' order.code %}" target="_blank" class="btn-ghost"><i data-lucide="printer" class="h-4 w-4"></i>In hóa đơn / phiếu giao</a>
+  </div>
+</div>
+{% endblock %}
+{% block content %}
+{% if order.is_online_payment and order.status == 'pending' and order.payment_status != 'paid' %}
+  <div class="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Đơn thanh toán online chưa được thanh toán – chưa thể xác nhận đơn.</div>
+{% endif %}
+
+{# Thanh tiến trình #}
+<section class="card mb-5 p-5">
+  {% if order.status == 'cancelled' %}
+    <div class="flex items-start gap-3 rounded-xl bg-red-50 p-4 text-sm text-red-800"><i data-lucide="x-circle" class="h-5 w-5 shrink-0"></i>
+      <div><strong>Đơn đã hủy</strong> lúc {{ order.cancelled_at|dt }} bởi {{ order.get_cancelled_by_display|lower }}.{% if order.cancel_reason %}<br>Lý do: {{ order.cancel_reason }}{% endif %}</div></div>
+  {% else %}
+    <ol class="grid grid-cols-5">
+      {% for step in progress %}
+        <li class="relative flex flex-col items-center text-center">
+          {% if not forloop.first %}<span class="absolute right-1/2 top-4 h-1 w-full {% if step.done %}bg-primary{% else %}bg-border{% endif %}"></span>{% endif %}
+          <span class="relative z-10 flex h-9 w-9 items-center justify-center rounded-full {% if step.done %}bg-primary text-white{% else %}border-2 border-border bg-white text-muted{% endif %}"><i data-lucide="{% if step.done %}check{% else %}circle{% endif %}" class="h-4 w-4"></i></span>
+          <span class="mt-2 text-xs font-semibold {% if not step.done %}text-muted{% endif %}">{{ step.label }}</span>
+          {% if step.done and step.time %}<span class="text-[10px] text-muted">{{ step.time|dt }}</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+  {% endif %}
+</section>
+
+<div class="grid gap-5 xl:grid-cols-3">
+  <div class="space-y-5 xl:col-span-2">
+    <div class="grid gap-4 md:grid-cols-2">
+      <section class="card p-5">
+        <h2 class="mb-3 font-bold">Khách hàng</h2>
+        <p class="font-semibold"><a href="{% url 'dashboard:customer_detail' order.user.pk %}" class="link">{{ order.user.display_name }}</a></p>
+        <p class="text-muted">{{ order.user.email }}{% if order.user.phone %} · {{ order.user.phone }}{% endif %}</p>
+      </section>
+      <section class="card p-5">
+        <h2 class="mb-3 font-bold">Người nhận & địa chỉ</h2>
+        <p class="font-semibold">{{ order.recipient_name }} · {{ order.recipient_phone }}</p>
+        <p class="text-muted">{{ order.recipient_email }}</p>
+        <p class="mt-1">{{ order.full_address }}</p>
+        <p class="mt-1 text-muted">{{ order.get_shipping_method_display }}</p>
+        {% if order.note %}<p class="mt-2 rounded-lg bg-slate-50 p-2 text-sm">Ghi chú của khách: {{ order.note }}</p>{% endif %}
+      </section>
+    </div>
+    <section class="card overflow-x-auto">
+      <h2 class="px-5 pt-5 font-bold">Sản phẩm</h2>
+      <table class="data-table mt-2">
+        <thead><tr><th>Sản phẩm</th><th>SKU</th><th>Đơn giá</th><th>SL</th><th class="text-right">Thành tiền</th></tr></thead>
+        <tbody>{% for item in order.items.all %}<tr>
+          <td><div class="flex items-center gap-2">{% if item.product_image %}<img src="{{ MEDIA_URL }}{{ item.product_image }}" alt="" class="h-10 w-10 rounded-lg object-cover">{% endif %}{{ item.product_name }}</div></td>
+          <td class="text-muted">{{ item.product_sku }}</td><td>{{ item.unit_price|vnd }}</td><td>{{ item.quantity }}</td><td class="text-right font-semibold">{{ item.line_total|vnd }}</td></tr>{% endfor %}</tbody>
+      </table>
+      <dl class="ml-auto max-w-sm space-y-1.5 border-t border-border p-5 text-sm">
+        <div class="flex justify-between"><dt class="text-muted">Tạm tính</dt><dd>{{ order.subtotal|vnd }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted">Giảm giá {% if order.coupon_code %}({{ order.coupon_code }}){% endif %}</dt><dd class="text-success">-{{ order.discount_amount|vnd }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted">Phí vận chuyển</dt><dd>{{ order.shipping_fee|vnd }}</dd></div>
+        <div class="flex justify-between text-base font-bold"><dt>Tổng thanh toán</dt><dd class="text-primary">{{ order.total|vnd }}</dd></div>
+      </dl>
+    </section>
+    <section class="card overflow-x-auto">
+      <h2 class="px-5 pt-5 font-bold">Thanh toán</h2>
+      <p class="px-5 pt-1 text-sm text-muted">{{ order.get_payment_method_display }} · {{ order.get_payment_status_display }}{% if order.paid_at %} · lúc {{ order.paid_at|dt }}{% endif %}</p>
+      <table class="data-table mt-2">
+        <thead><tr><th>Mã giao dịch</th><th>Số tiền</th><th>Trạng thái</th><th>Thời gian</th></tr></thead>
+        <tbody>{% for p in order.payments.all %}<tr><td><a href="{% url 'dashboard:payment_detail' p.pk %}" class="link">{{ p.transaction_ref }}</a></td><td>{{ p.amount|vnd }}</td><td>{% status_badge p.status p.get_status_display %}</td><td class="text-muted">{{ p.created_at|dt }}</td></tr>
+        {% empty %}<tr><td colspan="4" class="py-6 text-center text-muted">Chưa có giao dịch (đơn COD được ghi nhận khi giao thành công).</td></tr>{% endfor %}</tbody>
+      </table>
+    </section>
+  </div>
+  <aside class="space-y-5">
+    <section class="card p-5">
+      <h2 class="mb-3 font-bold">Lịch sử trạng thái</h2>
+      <ol class="space-y-3 border-l-2 border-border pl-5 text-sm">
+        {% for h in order.status_history.all %}
+          <li class="relative"><span class="absolute -left-[27px] top-1 h-3 w-3 rounded-full bg-primary"></span>
+            <span class="font-semibold">{{ h.to_status_label }}</span>
+            <div class="text-xs text-muted">{{ h.created_at|dt }} · {{ h.changed_by.display_name|default:'Hệ thống' }}</div>
+            {% if h.note %}<p class="text-muted">{{ h.note }}</p>{% endif %}
+          </li>
+        {% endfor %}
+      </ol>
+    </section>
+    <section class="card p-5">
+      <h2 class="mb-3 font-bold">Ghi chú nội bộ</h2>
+      <ul class="mb-3 space-y-2 text-sm">
+        {% for n in order.admin_notes %}<li class="rounded-lg bg-amber-50 p-2.5"><p>{{ n.text }}</p><p class="mt-1 text-xs text-muted">{{ n.by }} · {{ n.at }}</p></li>
+        {% empty %}<li class="text-muted">Chưa có ghi chú. Chỉ Admin nhìn thấy.</li>{% endfor %}
+      </ul>
+      <form method="post" action="{% url 'dashboard:order_add_note' order.code %}" class="space-y-2">{% csrf_token %}
+        <textarea name="text" rows="2" maxlength="1000" required class="form-input" placeholder="Thêm ghi chú nội bộ..."></textarea>
+        <button type="submit" class="btn-secondary btn-sm">Thêm ghi chú</button>
+      </form>
+    </section>
+  </aside>
+</div>
+{% endblock %}

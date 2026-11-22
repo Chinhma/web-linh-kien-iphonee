@@ -1,0 +1,11 @@
+.env
+db.backup-*.sqlite3
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+logs/
+staticfiles/
+_archive/db.old.sqlite3
+_archive/

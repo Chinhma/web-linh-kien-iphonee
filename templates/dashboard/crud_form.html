@@ -1,0 +1,136 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="{% url 'dashboard:'|add:cfg.key|add:'_list' %}" class="btn-ghost"><i data-lucide="arrow-left" class="h-4 w-4"></i>{{ cfg.title }}</a>{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="max-w-4xl pb-20" data-dirty-check novalidate>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-danger" role="alert">
+      <strong>Vui lòng sửa các lỗi sau:</strong>
+      <ul class="mt-1 list-disc pl-5">{% for field in form %}{% for e in field.errors %}<li>{{ field.label }}: {{ e }}</li>{% endfor %}{% endfor %}{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+  <section class="card p-6">
+    <div class="grid gap-4 md:grid-cols-2">
+      {% for field in form %}
+        {% if field.is_hidden %}{{ field }}{% else %}
+          {% include 'includes/components/field.html' with field=field wrapper_class=field.field.widget.input_type|yesno:',md:col-span-2' %}
+          {% if field.name == 'icon' %}<div class="flex items-center gap-3 text-sm text-muted md:col-span-2">Xem trước icon: <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-light text-primary" data-icon-preview><i data-lucide="{{ field.value|default:'package' }}" class="h-5 w-5"></i></span><a href="https://lucide.dev/icons/" target="_blank" rel="noopener" class="link text-xs">Tra cứu tên icon</a></div>{% endif %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+  {% if cfg.key == 'page' %}
+    <section class="card mt-4 p-5" data-md-preview-box hidden>
+      <h2 class="mb-3 flex items-center gap-2 font-bold"><i data-lucide="eye" class="h-4 w-4"></i>Xem trước</h2>
+      <div class="prose-ip text-[15px] leading-relaxed" data-md-preview></div>
+    </section>
+  {% endif %}
+  {% if cfg.key == 'coupon' %}
+    <section class="card mt-4 flex flex-wrap items-center gap-3 p-4 text-sm" data-coupon-preview>
+      <i data-lucide="calculator" class="h-5 w-5 text-primary"></i>
+      <label class="flex items-center gap-2">Đơn thử <input type="number" min="0" step="10000" value="1000000" class="form-input w-36 py-1.5" data-preview-total aria-label="Giá trị đơn thử"> ₫</label>
+      <span data-preview-text class="font-semibold"></span>
+    </section>
+  {% endif %}
+  <div class="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-white/95 backdrop-blur lg:left-[260px]">
+    <div class="flex flex-wrap items-center justify-end gap-2 px-4 py-3 lg:px-6">
+      <a href="{% url 'dashboard:'|add:cfg.key|add:'_list' %}" class="btn-ghost">Hủy</a>
+      <button type="submit" name="save_add" value="1" class="btn-secondary">Lưu & thêm mới</button>
+      <button type="submit" class="btn-primary"><i data-lucide="save" class="h-4 w-4"></i>Lưu</button>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { apiFetch } from '{% static "js/core/api.js" %}';
+  // Trang nội dung: thanh công cụ Markdown đơn giản + xem trước
+  const content = document.querySelector('textarea[name="content"]');
+  const previewBox = document.querySelector('[data-md-preview-box]');
+  if (content && previewBox) {
+    const bar = document.createElement('div');
+    bar.className = 'mb-1 flex flex-wrap gap-1 rounded-t-lg border border-b-0 border-border bg-slate-50 p-1.5';
+    const tools = [
+      ['B', 'In đậm', (t) => `**${t || 'chữ đậm'}**`],
+      ['I', 'In nghiêng', (t) => `*${t || 'chữ nghiêng'}*`],
+      ['H2', 'Tiêu đề lớn', (t) => `\n## ${t || 'Tiêu đề'}\n`],
+      ['H3', 'Tiêu đề nhỏ', (t) => `\n### ${t || 'Tiêu đề nhỏ'}\n`],
+      ['• Danh sách', 'Danh sách', (t) => (t || 'Mục 1\nMục 2').split('\n').map((l) => `- ${l}`).join('\n')],
+      ['🔗 Link', 'Chèn link', (t) => `[${t || 'chữ hiển thị'}](/duong-dan/)`],
+    ];
+    tools.forEach(([label, title, wrap]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'rounded-md px-2.5 py-1 text-sm font-semibold hover:bg-white';
+      b.textContent = label;
+      b.title = title;
+      b.addEventListener('click', () => {
+        const { selectionStart: s, selectionEnd: e, value } = content;
+        const out = wrap(value.slice(s, e));
+        content.setRangeText(out, s, e, 'end');
+        content.focus();
+        content.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      bar.appendChild(b);
+    });
+    const pv = document.createElement('button');
+    pv.type = 'button';
+    pv.className = 'ml-auto rounded-md bg-primary px-3 py-1 text-sm font-semibold text-white';
+    pv.textContent = 'Xem trước';
+    pv.addEventListener('click', async () => {
+      const res = await apiFetch('{% url "dashboard:markdown_preview" %}', { method: 'POST', body: { text: content.value } });
+      previewBox.querySelector('[data-md-preview]').innerHTML = res.data.html;
+      previewBox.hidden = false;
+      previewBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    bar.appendChild(pv);
+    content.insertAdjacentElement('beforebegin', bar);
+  }
+
+  // Mã giảm giá: nút tạo mã ngẫu nhiên + xem trước số tiền giảm
+  const code = document.querySelector('input[name="code"]');
+  const preview = document.querySelector('[data-coupon-preview]');
+  if (code && preview) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-ghost btn-sm mt-1';
+    btn.textContent = 'Tạo mã ngẫu nhiên';
+    btn.addEventListener('click', () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      code.value = 'IP' + Array.from(crypto.getRandomValues(new Uint32Array(6)), (n) => chars[n % chars.length]).join('');
+      code.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    code.insertAdjacentElement('afterend', btn);
+    const f = (n) => document.querySelector(`[name="${n}"]`);
+    const fmt = (n) => new Intl.NumberFormat('vi-VN').format(n) + '₫';
+    const totalEl = preview.querySelector('[data-preview-total]');
+    const textEl = preview.querySelector('[data-preview-text]');
+    const update = () => {
+      const total = Number(totalEl.value) || 0;
+      const value = Number(f('value')?.value) || 0;
+      const max = Number(f('max_discount')?.value) || 0;
+      const min = Number(f('min_order_value')?.value) || 0;
+      if (total < min) { textEl.textContent = `Chưa đạt đơn tối thiểu ${fmt(min)} – không được giảm.`; return; }
+      let discount = f('discount_type')?.value === 'percent' ? Math.floor(total * value / 100) : value;
+      if (f('discount_type')?.value === 'percent' && max) discount = Math.min(discount, max);
+      discount = Math.min(discount, total);
+      textEl.textContent = `Đơn ${fmt(total)} sẽ được giảm ${fmt(discount)} → còn ${fmt(total - discount)}`;
+    };
+    document.querySelector('form[data-dirty-check]').addEventListener('input', update);
+    document.querySelector('form[data-dirty-check]').addEventListener('change', update);
+    update();
+  }
+
+  const input = document.querySelector('input[name="icon"]');
+  const box = document.querySelector('[data-icon-preview]');
+  input?.addEventListener('input', () => {
+    box.innerHTML = '';
+    const i = document.createElement('i');
+    i.setAttribute('data-lucide', input.value.trim() || 'package');
+    i.className = 'h-5 w-5';
+    box.appendChild(i);
+    window.lucide?.createIcons();
+  });
+</script>
+{% endblock %}

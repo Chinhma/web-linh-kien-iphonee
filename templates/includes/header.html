@@ -1,0 +1,131 @@
+{% load static %}
+{% if store.announcement_text %}
+  <div id="announcement-bar" data-hash="{{ store.announcement_text|length }}{{ store.updated_at|date:'U' }}" class="bg-primary text-white">
+    <div class="container-x flex items-center justify-center gap-3 py-2 text-center text-xs sm:text-sm">
+      <i data-lucide="megaphone" class="hidden h-4 w-4 sm:block"></i>
+      <span>{{ store.announcement_text }}</span>
+      <button type="button" data-close class="ml-2 rounded p-0.5 hover:bg-white/20" aria-label="Đóng thông báo"><i data-lucide="x" class="h-4 w-4"></i></button>
+    </div>
+  </div>
+{% endif %}
+<header id="site-header" class="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur transition-shadow">
+  <div class="container-x flex h-[72px] items-center gap-3 lg:gap-8">
+    <button type="button" class="icon-btn lg:hidden" data-drawer-open="mobile-drawer" aria-label="Mở menu"><i data-lucide="menu"></i></button>
+    <a href="{% url 'products:home' %}" class="shrink-0 transition hover:opacity-90 lg:ml-6 xl:ml-10" aria-label="{{ store.store_name }} – Trang chủ">
+      <img src="{% static 'images/brand/logo-horizontal.svg' %}?v=2" alt="{{ store.store_name }}" class="h-9 w-auto lg:h-11" width="183" height="44">
+    </a>
+
+    <form action="{% url 'products:list' %}" method="get" role="search" class="relative mx-auto hidden w-full max-w-2xl flex-1 md:block" data-search-suggest>
+      <label for="header-search" class="sr-only">Tìm kiếm linh kiện</label>
+      <i data-lucide="search" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"></i>
+      <input id="header-search" name="q" value="{{ request.GET.q|default:'' }}" autocomplete="off" placeholder="Bạn cần tìm linh kiện gì? Ví dụ: màn hình iPhone 13 Pro, pin iPhone 11..." class="form-input h-11 rounded-full pl-11 pr-28">
+      <button type="submit" class="btn-primary absolute right-1 top-1/2 h-9 -translate-y-1/2 rounded-full px-5">Tìm kiếm</button>
+      <div data-suggest-box hidden class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-white shadow-card-hover"></div>
+    </form>
+
+    <div class="ml-auto flex shrink-0 items-center gap-1 md:ml-0">
+      <button type="button" class="icon-btn md:hidden" data-mobile-search-toggle aria-label="Tìm kiếm"><i data-lucide="search"></i></button>
+      {% if not is_admin_user %}
+        <a href="{% url 'cart:wishlist' %}" class="icon-btn relative" aria-label="Yêu thích">
+          <i data-lucide="heart"></i>
+          <span data-wishlist-count {% if not wishlist_count %}hidden{% endif %} class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-[11px] font-bold text-white">{{ wishlist_count }}</span>
+        </a>
+        <a href="{% url 'cart:cart' %}" class="icon-btn relative" aria-label="Giỏ hàng">
+          <i data-lucide="shopping-cart"></i>
+          <span data-cart-count {% if not cart_count %}hidden{% endif %} class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{{ cart_count }}</span>
+        </a>
+      {% endif %}
+      {% if user.is_authenticated %}
+        <div class="relative" data-dropdown>
+          <button type="button" data-dropdown-trigger aria-expanded="false" class="ml-1 flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-100">
+            {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="" class="h-8 w-8 rounded-full object-cover">
+            {% else %}<span class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">{{ user|initials }}</span>{% endif %}
+            <span class="hidden max-w-[120px] truncate text-sm font-medium xl:block">{{ user.display_name }}</span>
+            {% if is_admin_user %}<span class="badge-primary-strong px-2 py-0 text-[10px]">Admin</span>{% endif %}
+            <i data-lucide="chevron-down" class="hidden h-4 w-4 xl:block"></i>
+          </button>
+          <div data-dropdown-menu hidden class="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-white py-2 text-sm shadow-card-hover">
+            <div class="border-b border-border px-4 pb-2 text-xs text-muted">{{ user.email }}</div>
+            {% if is_admin_user %}
+              <a href="{% url 'dashboard:home' %}" class="flex items-center gap-2 px-4 py-2 font-semibold text-primary hover:bg-slate-50"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Vào trang quản trị</a>
+              <a href="{% url 'dashboard:profile' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="user-cog" class="h-4 w-4"></i>Hồ sơ quản trị</a>
+            {% else %}
+              <a href="{% url 'accounts:overview' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="user" class="h-4 w-4"></i>Tài khoản của tôi</a>
+              <a href="{% url 'orders:list' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="package" class="h-4 w-4"></i>Đơn hàng của tôi</a>
+              <a href="{% url 'cart:wishlist' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="heart" class="h-4 w-4"></i>Yêu thích</a>
+              <a href="{% url 'accounts:change_password' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="key-round" class="h-4 w-4"></i>Đổi mật khẩu</a>
+            {% endif %}
+            <form method="post" action="{% url 'accounts:logout' %}" class="border-t border-border pt-1">
+              {% csrf_token %}
+              <button type="submit" class="flex w-full items-center gap-2 px-4 py-2 text-left text-danger hover:bg-red-50"><i data-lucide="log-out" class="h-4 w-4"></i>Đăng xuất</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="btn hidden bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-text sm:inline-flex">Đăng nhập</a>
+        <a href="{% url 'accounts:register' %}?next={{ request.get_full_path|urlencode }}" class="btn-primary hidden sm:inline-flex">Đăng ký</a>
+        <a href="{% url 'accounts:login' %}" class="icon-btn sm:hidden" aria-label="Đăng nhập"><i data-lucide="user"></i></a>
+      {% endif %}
+    </div>
+  </div>
+  <div class="hidden border-t border-border lg:block">
+    <div class="container-x flex h-12 items-center justify-between">
+      <nav class="flex items-center gap-1 whitespace-nowrap text-sm font-medium" aria-label="Menu chính">
+        <a href="{% url 'products:home' %}" class="rounded-lg px-3 py-2 hover:bg-slate-100 {% if request.resolver_match.url_name == 'home' %}text-primary{% endif %}">Trang chủ</a>
+        <div class="relative" data-dropdown>
+          <button type="button" data-dropdown-trigger aria-expanded="false" class="flex items-center gap-1 rounded-lg px-3 py-2 hover:bg-slate-100">Danh mục linh kiện <i data-lucide="chevron-down" class="h-4 w-4"></i></button>
+          <div data-dropdown-menu hidden class="absolute left-0 top-full mt-2 w-[560px] rounded-card border border-border bg-white p-4 shadow-card-hover">
+            <div class="grid grid-cols-2 gap-1">
+              {% for cat in nav_categories %}
+                <a href="{{ cat.get_absolute_url }}" class="flex items-center gap-3 rounded-lg p-2.5 hover:bg-slate-50">
+                  <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-light text-primary"><i data-lucide="{{ cat.icon }}" class="h-5 w-5"></i></span>
+                  <span class="font-medium">{{ cat.name }}</span>
+                </a>
+              {% endfor %}
+            </div>
+            <a href="{% url 'products:list' %}" class="link mt-3 inline-flex items-center gap-1 text-sm">Xem tất cả sản phẩm <i data-lucide="arrow-right" class="h-4 w-4"></i></a>
+          </div>
+        </div>
+        <a href="{% url 'products:compatibility' %}" class="rounded-lg px-3 py-2 hover:bg-slate-100">Tra cứu tương thích</a>
+        <a href="{% url 'products:new' %}" class="rounded-lg px-3 py-2 hover:bg-slate-100">Sản phẩm mới</a>
+        <a href="{% url 'products:sale' %}" class="rounded-lg px-3 py-2 text-danger hover:bg-red-50">Khuyến mãi</a>
+      </nav>
+      <a href="tel:{{ store.hotline }}" class="flex items-center gap-2 whitespace-nowrap text-sm text-muted hover:text-primary"><i data-lucide="phone" class="h-4 w-4 text-primary"></i>Hotline: <strong class="text-text">{{ store.hotline_display }}</strong></a>
+    </div>
+  </div>
+  <div id="mobile-search" hidden class="border-t border-border p-3 md:hidden">
+    <form action="{% url 'products:list' %}" method="get" role="search" class="relative" data-search-suggest>
+      <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+      <input name="q" autocomplete="off" placeholder="Tìm linh kiện, SKU, dòng iPhone..." aria-label="Tìm kiếm" class="form-input rounded-full pl-9">
+      <div data-suggest-box hidden class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-white shadow-card-hover"></div>
+    </form>
+  </div>
+</header>
+
+<div id="mobile-drawer" data-drawer hidden class="fixed inset-0 z-50 bg-slate-900/50 lg:hidden">
+  <aside class="h-full w-80 max-w-[85%] overflow-y-auto bg-white p-5">
+    <div class="mb-6 flex items-center justify-between">
+      <img src="{% static 'images/brand/logo-horizontal.svg' %}?v=2" alt="{{ store.store_name }}" class="h-8">
+      <button type="button" class="icon-btn" data-drawer-close aria-label="Đóng menu"><i data-lucide="x"></i></button>
+    </div>
+    <nav class="space-y-1 text-sm font-medium">
+      <a href="{% url 'products:home' %}" class="block rounded-lg px-3 py-2.5 hover:bg-slate-100">Trang chủ</a>
+      <a href="{% url 'products:compatibility' %}" class="block rounded-lg px-3 py-2.5 hover:bg-slate-100">Tra cứu tương thích</a>
+      <a href="{% url 'products:new' %}" class="block rounded-lg px-3 py-2.5 hover:bg-slate-100">Sản phẩm mới</a>
+      <a href="{% url 'products:sale' %}" class="block rounded-lg px-3 py-2.5 text-danger hover:bg-red-50">Khuyến mãi</a>
+      <a href="{% url 'products:list' %}" class="block rounded-lg px-3 py-2.5 hover:bg-slate-100">Tất cả sản phẩm</a>
+    </nav>
+    <div class="mb-2 mt-6 px-3 text-xs font-semibold uppercase tracking-wider text-muted">Danh mục linh kiện</div>
+    <nav class="space-y-1 text-sm">
+      {% for cat in nav_categories %}
+        <a href="{{ cat.get_absolute_url }}" class="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-100"><i data-lucide="{{ cat.icon }}" class="h-4 w-4 text-primary"></i>{{ cat.name }}</a>
+      {% endfor %}
+    </nav>
+    {% if not user.is_authenticated %}
+      <div class="mt-6 grid grid-cols-2 gap-2">
+        <a href="{% url 'accounts:login' %}" class="btn-secondary">Đăng nhập</a>
+        <a href="{% url 'accounts:register' %}" class="btn-primary">Đăng ký</a>
+      </div>
+    {% endif %}
+  </aside>
+</div>

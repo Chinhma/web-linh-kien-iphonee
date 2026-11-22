@@ -1,0 +1,6 @@
+<a href="{% url 'dashboard:category_edit' c.pk %}" class="btn-ghost btn-sm" title="Sửa"><i data-lucide="pencil" class="h-4 w-4"></i></a>
+{% if c.product_total or children_count %}
+  <a href="{% url 'dashboard:category_delete' c.pk %}" class="btn-ghost btn-sm text-danger" title="Xóa (chuyển sản phẩm sang danh mục khác)"><i data-lucide="trash-2" class="h-4 w-4"></i></a>
+{% else %}
+  <form method="post" action="{% url 'dashboard:category_delete' c.pk %}" class="inline" data-confirm="Xóa danh mục “{{ c.name }}”? Thao tác không thể hoàn tác." data-confirm-ok="Xóa">{% csrf_token %}<button class="btn-ghost btn-sm text-danger" title="Xóa"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
+{% endif %}

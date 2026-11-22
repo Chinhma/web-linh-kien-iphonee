@@ -1,0 +1,49 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:category_add' %}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm danh mục</a>{% endblock %}
+{% block content %}
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr><th>Danh mục</th><th>Mã</th><th>Số sản phẩm</th><th>Thứ tự</th><th>Hoạt động</th><th class="text-right">Hành động</th></tr></thead>
+    {% for t in tree %}
+      <tbody data-tree-group>
+        <tr class="bg-slate-50/60">
+          <td>
+            <button type="button" class="flex items-center gap-2 font-bold" data-tree-toggle aria-expanded="true">
+              <i data-lucide="chevron-down" class="h-4 w-4 text-muted transition-transform" data-tree-arrow></i>
+              <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-primary"><i data-lucide="{{ t.node.icon }}" class="h-4 w-4"></i></span>{{ t.node.name }}
+              {% if t.children %}<span class="badge-muted">{{ t.children|length }} mục con</span>{% endif %}
+            </button>
+          </td>
+          <td><code class="text-xs">{{ t.node.code }}</code></td>
+          <td><a href="{% url 'dashboard:product_list' %}?category={{ t.node.slug }}" class="link">{{ t.node.product_total }}</a></td>
+          <td>{{ t.node.display_order }}</td>
+          <td>{% include 'dashboard/components/switch.html' with url_model='category-active' obj=t.node on=t.node.is_active %}</td>
+          <td class="whitespace-nowrap text-right">{% include 'dashboard/_category_actions.html' with c=t.node children_count=t.children|length %}</td>
+        </tr>
+        {% for c in t.children %}
+          <tr data-tree-child>
+            <td><span class="ml-10 flex items-center gap-2"><span class="text-muted">└</span>{{ c.name }}</span></td>
+            <td><code class="text-xs">{{ c.code }}</code></td>
+            <td><a href="{% url 'dashboard:product_list' %}?category={{ c.slug }}" class="link">{{ c.product_total }}</a></td>
+            <td>{{ c.display_order }}</td>
+            <td>{% include 'dashboard/components/switch.html' with url_model='category-active' obj=c on=c.is_active %}</td>
+            <td class="whitespace-nowrap text-right">{% include 'dashboard/_category_actions.html' with c=c children_count=0 %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    {% empty %}
+      <tbody><tr><td colspan="6">{% include 'dashboard/components/empty_state.html' with icon='folder-tree' title='Chưa có danh mục' action_url='/quan-tri/danh-muc/them/' action_text='Thêm danh mục' %}</td></tr></tbody>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  document.querySelectorAll('[data-tree-toggle]').forEach((b) => b.addEventListener('click', () => {
+    const open = b.getAttribute('aria-expanded') !== 'true';
+    b.setAttribute('aria-expanded', String(open));
+    b.querySelector('[data-tree-arrow]').style.transform = open ? '' : 'rotate(-90deg)';
+    b.closest('[data-tree-group]').querySelectorAll('[data-tree-child]').forEach((r) => { r.hidden = !open; });
+  }));
+</script>
+{% endblock %}

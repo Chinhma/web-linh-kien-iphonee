@@ -1,0 +1,9 @@
+{# Thẻ số liệu nhỏ. Biến: icon, color (class nền+chữ icon), label, value, sub (tùy chọn), url (tùy chọn) #}
+{% if url %}<a href="{{ url }}" class="card card-hover flex items-center gap-4 p-4">{% else %}<div class="card flex items-center gap-4 p-4">{% endif %}
+  <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full {{ color|default:'bg-primary-light text-primary' }}"><i data-lucide="{{ icon }}" class="h-5 w-5"></i></span>
+  <div class="min-w-0">
+    <div class="truncate text-xs text-muted">{{ label }}</div>
+    <div class="truncate text-lg font-bold">{{ value }}</div>
+    {% if sub %}<div class="truncate text-xs text-muted">{{ sub }}</div>{% endif %}
+  </div>
+{% if url %}</a>{% else %}</div>{% endif %}

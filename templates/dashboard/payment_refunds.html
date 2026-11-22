@@ -1,0 +1,45 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:payment_list' %}" class="btn-secondary">Tất cả giao dịch</a>{% endblock %}
+{% block content %}
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Phương thức</th><th>{% include 'dashboard/_sort.html' with key='total' label='Số tiền cần hoàn' %}</th><th>{% include 'dashboard/_sort.html' with key='date' label='Hủy lúc' %}</th><th class="text-right">Hành động</th></tr></thead>
+    <tbody>
+      {% for o in page_obj %}
+        <tr>
+          <td data-label="Mã đơn"><a href="{% url 'dashboard:order_detail' o.code %}" class="link">{{ o.code }}</a></td>
+          <td data-label="Khách hàng">{{ o.recipient_name }}<div class="text-xs text-muted">{{ o.user.email }}</div></td>
+          <td data-label="Phương thức">{{ o.get_payment_method_display }}</td>
+          <td data-label="Số tiền" class="font-bold">{{ o.total|vnd }}</td>
+          <td data-label="Hủy lúc" class="text-muted">{{ o.cancelled_at|dt }}</td>
+          <td class="text-right"><button type="button" class="btn-primary btn-sm" data-refund="{{ o.code }}" data-amount="{{ o.total|vnd }}">Đánh dấu đã hoàn tiền</button></td>
+        </tr>
+      {% empty %}<tr><td colspan="6">{% include 'dashboard/components/empty_state.html' with icon='badge-check' title='Không có đơn nào chờ hoàn tiền' %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+
+<div id="refund-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="refund-title">
+  <form method="post" class="relative w-full max-w-md space-y-4 rounded-modal bg-white p-6">
+    {% csrf_token %}<input type="hidden" name="code" data-refund-code>
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="refund-title" class="text-lg font-bold">Xác nhận đã hoàn tiền</h2>
+    <p class="text-sm text-muted">Đơn <strong data-refund-label></strong> – số tiền <strong data-refund-amount></strong>. Chỉ xác nhận sau khi đã chuyển tiền lại cho khách.</p>
+    <label class="form-label block">Mã giao dịch hoàn tiền <span class="text-danger">*</span><input name="refund_ref" required maxlength="100" class="form-input mt-1"></label>
+    <label class="form-label block">Ghi chú<textarea name="note" rows="2" maxlength="300" class="form-input mt-1"></textarea></label>
+    <div class="flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Xác nhận</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { openModal } from '/static/js/core/modal.js';
+  document.querySelectorAll('[data-refund]').forEach((b) => b.addEventListener('click', () => {
+    document.querySelector('[data-refund-code]').value = b.dataset.refund;
+    document.querySelector('[data-refund-label]').textContent = b.dataset.refund;
+    document.querySelector('[data-refund-amount]').textContent = b.dataset.amount;
+    openModal('refund-modal');
+  }));
+</script>
+{% endblock %}

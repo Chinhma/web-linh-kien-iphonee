@@ -1,0 +1,11 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<a href="{% url 'dashboard:compat_list' %}" class="mb-4 inline-flex items-center gap-1 text-muted hover:text-primary"><i data-lucide="arrow-left" class="h-4 w-4"></i>Linh kiện tương thích</a>
+<form method="post" class="card max-w-xl space-y-4 p-6">
+  {% csrf_token %}
+  <p><strong>{{ comp.product.name }}</strong> ↔ <strong>{{ comp.iphone_model.name }}</strong></p>
+  {% for field in form %}{% include 'includes/components/field.html' with field=field %}{% endfor %}
+  {% if comp.verified_at %}<p class="text-xs text-muted">Xác nhận bởi {{ comp.verified_by.display_name|default:'Hệ thống' }} lúc {{ comp.verified_at|dt }}</p>{% endif %}
+  <button class="btn-primary">Lưu</button>
+</form>
+{% endblock %}

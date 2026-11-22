@@ -1,0 +1,7 @@
+<div class="inline-flex items-center rounded-btn border border-border bg-white" data-stepper>
+  <button type="button" data-step="-1" class="flex h-10 w-10 items-center justify-center text-muted hover:text-primary" aria-label="Giảm số lượng"><i data-lucide="minus" class="h-4 w-4"></i></button>
+  <input type="number" id="{{ input_id }}" {% if name %}name="{{ name }}"{% endif %} value="{{ value|default:1 }}" min="1" max="{{ max|default:10 }}"
+         class="h-10 w-12 border-0 text-center text-sm font-semibold focus:ring-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+         aria-label="Số lượng" {% if item_id %}data-item-id="{{ item_id }}"{% endif %}>
+  <button type="button" data-step="1" class="flex h-10 w-10 items-center justify-center text-muted hover:text-primary" aria-label="Tăng số lượng"><i data-lucide="plus" class="h-4 w-4"></i></button>
+</div>

@@ -1,0 +1,48 @@
+{% extends 'customer/_base.html' %}
+{% load static %}
+{% block title %}Sổ địa chỉ{% endblock %}
+{% block account_content %}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl">Sổ địa chỉ</h1>
+  {% if addresses|length < max_addresses %}<button type="button" class="btn-primary" data-address-new><i data-lucide="plus" class="h-4 w-4"></i>Thêm địa chỉ</button>{% endif %}
+</div>
+{% if addresses %}
+  <div class="grid gap-4 md:grid-cols-2">
+    {% for a in addresses %}
+      <div class="card p-5 {% if a.is_default %}border-primary{% endif %}">
+        <div class="flex items-start justify-between gap-3">
+          <div><div class="font-semibold">{{ a.full_name }}</div><div class="text-sm text-muted">{{ a.phone }}</div></div>
+          {% if a.is_default %}<span class="badge-primary">Mặc định</span>{% endif %}
+        </div>
+        <p class="mt-2 text-sm">{{ a.full_address }}</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button type="button" class="btn-secondary btn-sm" data-address-edit='{"id": {{ a.pk }}, "full_name": "{{ a.full_name|escapejs }}", "phone": "{{ a.phone|escapejs }}", "province_code": "{{ a.province_code|escapejs }}", "ward_code": "{{ a.ward_code|escapejs }}", "street_address": "{{ a.street_address|escapejs }}", "is_default": {{ a.is_default|yesno:"true,false" }}}'>Sửa</button>
+          {% if not a.is_default %}
+            <form method="post" action="{% url 'accounts:address_default' a.pk %}">{% csrf_token %}<button type="submit" class="btn-ghost btn-sm">Đặt mặc định</button></form>
+          {% endif %}
+          <form method="post" action="{% url 'accounts:address_delete' a.pk %}" data-confirm="Xóa địa chỉ này khỏi sổ địa chỉ?" data-confirm-ok="Xóa">{% csrf_token %}<button type="submit" class="btn-ghost btn-sm text-danger">Xóa</button></form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  {% include 'includes/components/empty_state.html' with icon='map-pin' title='Chưa có địa chỉ nào' description='Lưu địa chỉ để thanh toán nhanh hơn.' %}
+{% endif %}
+
+<div id="address-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="address-modal-title">
+  <form method="post" action="{% url 'accounts:address_add' %}" data-add-action="{% url 'accounts:address_add' %}" class="relative max-h-[90vh] w-full max-w-lg overflow-visible rounded-modal bg-white p-6" data-address-form autocomplete="off">
+    {% csrf_token %}
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="address-modal-title" class="text-lg font-bold" data-address-title>Thêm địa chỉ</h2>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      {% include 'includes/components/field.html' with field=form.full_name %}
+      {% include 'includes/components/field.html' with field=form.phone %}
+      {% include 'includes/components/address_picker.html' with form=form prefix='book' wrapper_class='sm:col-span-2' %}
+      {% include 'includes/components/field.html' with field=form.street_address wrapper_class='sm:col-span-2' %}
+      {% include 'includes/components/field.html' with field=form.is_default wrapper_class='sm:col-span-2' %}
+    </div>
+    <div class="mt-6 flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Lưu địa chỉ</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/addresses.js' %}"></script>{% endblock %}

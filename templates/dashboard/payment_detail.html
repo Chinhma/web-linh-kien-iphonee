@@ -1,0 +1,24 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<a href="{% url 'dashboard:payment_list' %}" class="mb-4 inline-flex text-muted hover:text-primary">← Thanh toán</a>
+<div class="grid gap-4 lg:grid-cols-2">
+  <section class="card p-5">
+    <dl class="space-y-2">
+      <div class="flex justify-between"><dt class="text-muted">Mã giao dịch nội bộ</dt><dd class="font-semibold">{{ payment.transaction_ref }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Mã giao dịch cổng</dt><dd>{{ payment.gateway_transaction_id|default:'—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Đơn hàng</dt><dd><a href="{% url 'dashboard:order_detail' payment.order.code %}" class="link">{{ payment.order.code }}</a></dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Khách hàng</dt><dd>{{ payment.order.user.email }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Phương thức</dt><dd class="uppercase">{{ payment.method }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Số tiền</dt><dd class="font-bold">{{ payment.amount|vnd }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Trạng thái</dt><dd>{% status_badge payment.status payment.get_status_display %}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Mã phản hồi</dt><dd>{{ payment.gateway_response_code|default:'—' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Tạo lúc</dt><dd>{{ payment.created_at|dt }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Thanh toán lúc</dt><dd>{{ payment.paid_at|dt|default:'—' }}</dd></div>
+    </dl>
+  </section>
+  <section class="card p-5">
+    <h3 class="mb-2 font-bold">Dữ liệu phản hồi từ cổng (raw_response)</h3>
+    <pre class="max-h-96 overflow-auto rounded-lg bg-slate-900 p-4 text-xs text-green-300">{{ raw_json }}</pre>
+  </section>
+</div>
+{% endblock %}

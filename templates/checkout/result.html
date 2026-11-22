@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}{% if success %}Đặt hàng thành công{% else %}Thanh toán chưa thành công{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-x max-w-2xl py-12">
+  <div class="card p-6 text-center md:p-10">
+    {% if success %}
+      <span class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-100 text-success"><i data-lucide="check-circle-2" class="h-11 w-11"></i></span>
+      <h1 class="mt-5 text-2xl md:text-3xl">Đặt hàng thành công!</h1>
+      <p class="mt-2 text-muted">Cảm ơn bạn đã mua sắm tại iParts Store. Chúng tôi sẽ liên hệ xác nhận đơn hàng sớm nhất.</p>
+    {% else %}
+      <span class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-warning"><i data-lucide="alert-triangle" class="h-11 w-11"></i></span>
+      <h1 class="mt-5 text-2xl md:text-3xl">Thanh toán chưa thành công</h1>
+      {% if reason %}<p class="mt-2 text-muted">{{ reason }}</p>{% endif %}
+    {% endif %}
+
+    {% if order %}
+      <dl class="mx-auto mt-8 max-w-md space-y-3 rounded-xl bg-slate-50 p-5 text-left text-sm">
+        <div class="flex items-center justify-between"><dt class="text-muted">Mã đơn hàng</dt><dd class="flex items-center gap-2 font-bold">{{ order.code }}<button type="button" data-copy="{{ order.code }}" class="text-primary" aria-label="Sao chép mã đơn"><i data-lucide="copy" class="h-4 w-4"></i></button></dd></div>
+        <div class="flex justify-between"><dt class="text-muted">Tổng tiền</dt><dd class="font-bold text-primary">{{ order.total|vnd }}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="text-muted">Thanh toán</dt><dd class="text-right">{{ order.get_payment_method_display }} – {% status_badge order.payment_status order.get_payment_status_display %}</dd></div>
+        <div class="flex justify-between gap-4"><dt class="shrink-0 text-muted">Giao tới</dt><dd class="text-right">{{ order.recipient_name }}, {{ order.full_address }}</dd></div>
+        <div class="flex justify-between"><dt class="text-muted">Dự kiến giao</dt><dd>{% if order.shipping_method == 'express' %}1–2 ngày{% else %}3–5 ngày{% endif %} làm việc</dd></div>
+      </dl>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        {% if not success and order.can_retry_payment %}
+          <a href="{% url 'payments:start' order.code %}" class="btn-primary">Thanh toán lại</a>
+        {% endif %}
+        <a href="{% url 'orders:detail' order.code %}" class="btn-secondary">Xem chi tiết đơn hàng</a>
+        <a href="{% url 'products:list' %}" class="btn-ghost">Tiếp tục mua sắm</a>
+      </div>
+    {% else %}
+      <div class="mt-8"><a href="{% url 'products:home' %}" class="btn-primary">Về trang chủ</a></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

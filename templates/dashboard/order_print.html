@@ -1,0 +1,37 @@
+{% load static %}<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Hóa đơn {{ order.code }} | iParts Store</title>
+  <link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v=3">
+</head>
+<body class="bg-white p-8 text-sm text-text">
+  <div class="mx-auto max-w-3xl">
+    <div class="flex items-start justify-between border-b border-border pb-4">
+      <img src="{% static 'images/brand/logo-horizontal.svg' %}?v=2" alt="iParts Store" class="h-10">
+      <div class="text-right">
+        <h1 class="text-xl font-bold">HÓA ĐƠN / PHIẾU GIAO HÀNG</h1>
+        <p>Mã đơn: <strong>{{ order.code }}</strong></p>
+        <p class="text-muted">Ngày đặt: {{ order.created_at|dt }}</p>
+      </div>
+    </div>
+    <div class="mt-4 grid grid-cols-2 gap-4">
+      <div><p class="font-semibold">Người bán</p><p>{{ store.store_name }}</p><p>Hotline: {{ store.hotline_display }}</p><p>{{ store.email }}</p></div>
+      <div><p class="font-semibold">Người nhận</p><p>{{ order.recipient_name }} – {{ order.recipient_phone }}</p><p>{{ order.full_address }}</p></div>
+    </div>
+    <table class="mt-6 w-full border-collapse">
+      <thead><tr class="border-b-2 border-text text-left"><th class="py-2">Sản phẩm</th><th>SKU</th><th class="text-right">Đơn giá</th><th class="text-right">SL</th><th class="text-right">Thành tiền</th></tr></thead>
+      <tbody>{% for i in order.items.all %}<tr class="border-b border-border"><td class="py-2">{{ i.product_name }}</td><td>{{ i.product_sku }}</td><td class="text-right">{{ i.unit_price|vnd }}</td><td class="text-right">{{ i.quantity }}</td><td class="text-right">{{ i.line_total|vnd }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <dl class="ml-auto mt-4 max-w-xs space-y-1">
+      <div class="flex justify-between"><dt>Tạm tính</dt><dd>{{ order.subtotal|vnd }}</dd></div>
+      <div class="flex justify-between"><dt>Giảm giá</dt><dd>-{{ order.discount_amount|vnd }}</dd></div>
+      <div class="flex justify-between"><dt>Phí vận chuyển</dt><dd>{{ order.shipping_fee|vnd }}</dd></div>
+      <div class="flex justify-between border-t border-text pt-1 text-base font-bold"><dt>Tổng thanh toán</dt><dd>{{ order.total|vnd }}</dd></div>
+    </dl>
+    <p class="mt-4">Thanh toán: {{ order.get_payment_method_display }} – {{ order.get_payment_status_display }}</p>
+    {% if order.note %}<p>Ghi chú: {{ order.note }}</p>{% endif %}
+    <button type="button" onclick="window.print()" class="btn-primary no-print mt-6">In</button>
+  </div>
+</body>
+</html>

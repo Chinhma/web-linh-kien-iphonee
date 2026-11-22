@@ -1,0 +1,26 @@
+{% extends 'customer/_base.html' %}
+{% load static %}
+{% block title %}Thông tin cá nhân{% endblock %}
+{% block account_content %}
+<div class="card p-6">
+  <h1 class="text-2xl">Thông tin cá nhân</h1>
+  <form method="post" enctype="multipart/form-data" class="mt-6 grid gap-5 md:grid-cols-[160px_1fr]" data-once>
+    {% csrf_token %}
+    <div class="flex flex-col items-center gap-3">
+      <img data-avatar-preview src="{% if user.avatar %}{{ user.avatar.url }}{% else %}{% static 'images/brand/logo-mark.svg' %}?v=2{% endif %}" alt="Ảnh đại diện" class="h-32 w-32 rounded-full border border-border bg-slate-50 object-cover">
+      <label class="btn-secondary btn-sm cursor-pointer">Chọn ảnh{{ form.avatar }}</label>
+      <p class="text-center text-xs text-muted">JPG, PNG, WEBP · tối đa 5 MB</p>
+      {% for e in form.avatar.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      {% include 'includes/components/field.html' with field=form.full_name %}
+      {% include 'includes/components/field.html' with field=form.phone %}
+      <div><label class="form-label">Email</label><input value="{{ user.email }}" readonly class="form-input bg-slate-50 text-muted" aria-readonly="true"><p class="form-hint">Email không thể thay đổi.</p></div>
+      {% include 'includes/components/field.html' with field=form.date_of_birth %}
+      {% include 'includes/components/field.html' with field=form.gender %}
+      <div class="sm:col-span-2"><button type="submit" class="btn-primary">Lưu thay đổi</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/avatar-preview.js' %}"></script>{% endblock %}

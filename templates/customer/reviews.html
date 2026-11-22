@@ -1,0 +1,53 @@
+{% extends 'customer/_base.html' %}
+{% load static %}
+{% block title %}Đánh giá của tôi{% endblock %}
+{% block account_content %}
+<h1 class="mb-4 text-2xl">Đánh giá của tôi</h1>
+{% if pending_items %}
+  <div class="card mb-6 overflow-hidden">
+    <h2 class="border-b border-border px-5 py-3 font-bold">Sản phẩm chờ đánh giá ({{ pending_items|length }})</h2>
+    {% for item in pending_items %}
+      <div class="flex flex-wrap items-center gap-3 border-b border-border p-4 last:border-0">
+        {% if item.product_image %}<img src="{{ MEDIA_URL }}{{ item.product_image }}" alt="" class="h-14 w-14 rounded-lg object-cover">{% endif %}
+        <div class="min-w-0 flex-1"><div class="font-semibold">{{ item.product_name }}</div><div class="text-xs text-muted">Đơn {{ item.order.code }} · giao {{ item.order.delivered_at|d }}</div></div>
+        <button type="button" class="btn-primary btn-sm" data-review-item="{{ item.pk }}" data-review-name="{{ item.product_name }}">Viết đánh giá</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+<div class="card overflow-hidden">
+  <h2 class="border-b border-border px-5 py-3 font-bold">Đánh giá đã viết</h2>
+  {% for review in reviews %}
+    <div class="border-b border-border p-4 last:border-0">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <a href="{{ review.product.get_absolute_url }}" class="font-semibold hover:text-primary">{{ review.product.name }}</a>
+        {% status_badge review.status review.get_status_display %}
+      </div>
+      <div class="mt-1">{% include 'includes/components/stars.html' with rating=review.rating %}</div>
+      <p class="mt-2 text-sm">{{ review.content }}</p>
+      <p class="mt-1 text-xs text-muted">{{ review.created_at|dt }}</p>
+      {% if review.admin_reply %}<div class="mt-2 rounded-lg bg-primary-light/50 p-3 text-sm"><strong>iParts Store:</strong> {{ review.admin_reply }}</div>{% endif %}
+    </div>
+  {% empty %}<p class="p-8 text-center text-sm text-muted">Bạn chưa viết đánh giá nào.</p>{% endfor %}
+</div>
+
+<div id="review-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="review-title">
+  <form method="post" action="{% url 'reviews:create' %}" class="relative w-full max-w-md rounded-modal bg-white p-6" data-once>
+    {% csrf_token %}
+    <input type="hidden" name="order_item_id" data-review-input>
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="review-title" class="text-lg font-bold">Đánh giá sản phẩm</h2>
+    <p class="mt-1 text-sm text-muted" data-review-product></p>
+    <fieldset class="mt-4 flex flex-row-reverse justify-end gap-1" aria-label="Chọn số sao">
+      {% for n in '54321' %}
+        <input type="radio" id="mrate{{ n }}" name="rating" value="{{ n }}" class="peer sr-only" required {% if n == '5' %}checked{% endif %}>
+        <label for="mrate{{ n }}" class="cursor-pointer text-3xl text-border hover:text-warning peer-checked:text-warning [&:hover~label]:text-warning">★</label>
+      {% endfor %}
+    </fieldset>
+    <textarea name="content" rows="4" minlength="10" maxlength="1000" required class="form-input mt-3" placeholder="Chia sẻ trải nghiệm của bạn (10–1000 ký tự)"></textarea>
+    <div class="mt-6 flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Gửi đánh giá</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/review-modal.js' %}"></script>{% endblock %}

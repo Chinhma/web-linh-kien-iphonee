@@ -1,0 +1,59 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="{% url 'dashboard:compat_list' %}" class="btn-secondary">Danh sách tương thích</a>{% endblock %}
+{% block content %}
+<form method="post" class="grid gap-5 xl:grid-cols-[1fr_340px]" data-dirty-check>
+  {% csrf_token %}
+  <div class="space-y-5">
+    <section class="card p-5">
+      <h2 class="mb-3 font-bold">1. Sản phẩm <span class="text-danger">*</span></h2>
+      {% include 'dashboard/components/product_picker.html' with name='product' preset=preset required=True %}
+    </section>
+    <section class="card p-5">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-bold">2. Dòng iPhone tương thích <span class="text-danger">*</span></h2>
+        <input type="search" placeholder="Tìm nhanh, ví dụ 13 pro" class="form-input w-56 py-1.5" data-model-filter aria-label="Tìm dòng iPhone">
+      </div>
+      <div class="space-y-4">
+        {% for g in iphone_groups %}
+          <div data-model-group>
+            <div class="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase text-muted">{{ g.label }}<button type="button" class="normal-case text-primary" data-group-all>Chọn cả nhóm</button></div>
+            <div class="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              {% for m in g.models %}
+                <label class="flex items-center gap-2 rounded-lg border border-border px-3 py-2 has-[:checked]:border-primary has-[:checked]:bg-primary-light/40" data-model-name="{{ m.name|lower }}">
+                  <input type="checkbox" name="iphone_models" value="{{ m.pk }}" class="form-check" {% if m.pk == preset_model %}checked{% endif %}>{{ m.name }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+  <aside>
+    <section class="card space-y-4 p-5 xl:sticky xl:top-20">
+      <label class="form-label block">Trạng thái <span class="text-danger">*</span>
+        <select name="status" class="form-input mt-1">{% for v, l in statuses %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select>
+        <span class="form-hint block font-normal">Chỉ "Đã xác nhận" mới hiển thị cho khách và chatbot.</span>
+      </label>
+      <label class="form-label block">Ghi chú tương thích<input name="note" maxlength="300" class="form-input mt-1" placeholder="Ví dụ: Cần chuyển True Tone"></label>
+      <label class="form-label block">Nguồn thông tin<input name="source" maxlength="200" class="form-input mt-1" placeholder="Tài liệu NCC, kiểm tra thực tế..."></label>
+      <button type="submit" class="btn-primary w-full">Lưu tương thích</button>
+      <a href="{% url 'dashboard:compat_list' %}" class="btn-ghost w-full">Hủy</a>
+    </section>
+  </aside>
+</form>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import '{% static "js/dashboard/product-picker.js" %}';
+  document.querySelector('[data-model-filter]').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    document.querySelectorAll('[data-model-name]').forEach((l) => { l.hidden = q && !l.dataset.modelName.includes(q); });
+  });
+  document.querySelectorAll('[data-group-all]').forEach((b) => b.addEventListener('click', () => {
+    const boxes = [...b.closest('[data-model-group]').querySelectorAll('input[type=checkbox]')];
+    const all = boxes.every((x) => x.checked); boxes.forEach((x) => { x.checked = !all; });
+  }));
+</script>
+{% endblock %}

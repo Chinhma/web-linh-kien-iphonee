@@ -1,0 +1,49 @@
+# Bản dịch bổ sung cho chuỗi admin Django còn thiếu tiếng Việt (sinh bởi locale/build_mo.py).
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: vi\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Show counts"
+msgstr "Hiện số lượng"
+
+msgid "Hide counts"
+msgstr "Ẩn số lượng"
+
+msgid "By %(filter_title)s"
+msgstr "Theo %(filter_title)s"
+
+msgid "Toggle theme (current theme: auto)"
+msgstr "Đổi giao diện (hiện tại: tự động)"
+
+msgid "Toggle theme (current theme: light)"
+msgstr "Đổi giao diện (hiện tại: sáng)"
+
+msgid "Toggle theme (current theme: dark)"
+msgstr "Đổi giao diện (hiện tại: tối)"
+
+msgid "Toggle navigation"
+msgstr "Ẩn/hiện menu"
+
+msgid "Skip to main content"
+msgstr "Bỏ qua tới nội dung chính"
+
+msgid "Run the selected action"
+msgstr "Thực hiện thao tác đã chọn"
+
+msgid "Action:"
+msgstr "Thao tác:"
+
+msgid "Go"
+msgstr "Thực hiện"
+
+msgid "History"
+msgstr "Lịch sử"
+
+msgid "Currently:"
+msgstr "Hiện tại:"
+
+msgid "Please correct the error below."
+msgid_plural "Please correct the errors below."
+msgstr[0] "Vui lòng sửa lỗi bên dưới."

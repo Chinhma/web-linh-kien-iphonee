@@ -1,0 +1,31 @@
+{% extends 'accounts/_auth_base.html' %}
+{% load static %}
+{% block title %}Đăng ký tài khoản{% endblock %}
+{% block auth_content %}
+<h1 class="text-2xl">Tạo tài khoản</h1>
+<p class="mt-1 text-sm text-muted">Đăng ký để mua hàng và theo dõi đơn hàng tại iParts Store.</p>
+<form method="post" class="mt-6 space-y-4" data-once novalidate>
+  {% csrf_token %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  {% include 'includes/components/field.html' with field=form.full_name %}
+  <div class="grid gap-4 sm:grid-cols-2">
+    {% include 'includes/components/field.html' with field=form.email %}
+    {% include 'includes/components/field.html' with field=form.phone %}
+  </div>
+  <div>
+    {% include 'includes/components/field.html' with field=form.password1 password=True hide_help=True %}
+    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100"><div data-strength-bar class="h-full w-0 rounded-full transition-all"></div></div>
+    <p class="form-hint" data-strength-label>Tối thiểu 8 ký tự, có cả chữ và số.</p>
+  </div>
+  {% include 'includes/components/field.html' with field=form.password2 password=True %}
+  <div class="{% if form.terms.errors %}is-invalid{% endif %}">
+    <label class="flex items-start gap-2 text-sm">{{ form.terms }}<span>Tôi đồng ý với <a href="{% url 'core:page' 'dieu-khoan' %}" target="_blank" class="link">Điều khoản sử dụng</a> và <a href="{% url 'core:page' 'chinh-sach-bao-mat' %}" target="_blank" class="link">Chính sách bảo mật</a></span></label>
+    {% for error in form.terms.errors %}<p class="form-error">{{ error }}</p>{% endfor %}
+  </div>
+  <button type="submit" class="btn-primary btn-lg w-full">Đăng ký</button>
+</form>
+<div class="my-5 flex items-center gap-3 text-xs text-muted"><span class="h-px flex-1 bg-border"></span>hoặc<span class="h-px flex-1 bg-border"></span></div>
+{% include 'includes/components/google_button.html' %}
+<p class="mt-6 text-center text-sm text-muted">Đã có tài khoản? <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}" class="link">Đăng nhập</a></p>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/password-strength.js' %}"></script>{% endblock %}

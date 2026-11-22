@@ -1,0 +1,24 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+{% include 'dashboard/_range_filter.html' %}
+<div class="mb-3 flex justify-end"><a href="?{% url_replace export='csv' %}" class="btn-ghost"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a></div>
+<div class="mb-4 grid gap-4 sm:grid-cols-3">
+  <div class="card p-4"><div class="text-xs text-muted">Tổng số đơn</div><div class="mt-1 text-xl font-bold">{{ data.total }}</div></div>
+  <div class="card p-4"><div class="text-xs text-muted">Giao thành công</div><div class="mt-1 text-xl font-bold text-success">{{ data.delivered }}</div></div>
+  <div class="card p-4"><div class="text-xs text-muted">Tỉ lệ hủy</div><div class="mt-1 text-xl font-bold text-danger">{{ data.cancel_rate }}%</div></div>
+</div>
+<div class="grid gap-4 lg:grid-cols-3">
+  <section class="card p-5">
+    <h3 class="mb-3 font-bold">Theo trạng thái</h3>
+    <ul class="space-y-2">{% for label, code, count in status_rows %}<li class="flex justify-between">{% status_badge code label %}<strong>{{ count }}</strong></li>{% endfor %}</ul>
+  </section>
+  <section class="card p-5">
+    <h3 class="mb-3 font-bold">Theo phương thức thanh toán</h3>
+    <ul class="space-y-2">{% for label, count in method_rows %}<li class="flex justify-between"><span>{{ label }}</span><strong>{{ count }}</strong></li>{% empty %}<li class="text-muted">Không có dữ liệu.</li>{% endfor %}</ul>
+  </section>
+  <section class="card p-5">
+    <h3 class="mb-3 font-bold">Lý do hủy phổ biến</h3>
+    <ul class="space-y-2">{% for r in data.reasons %}<li class="flex justify-between gap-2"><span class="truncate">{{ r.cancel_reason }}</span><strong>{{ r.c }}</strong></li>{% empty %}<li class="text-muted">Không có đơn hủy.</li>{% endfor %}</ul>
+  </section>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% load static %}
+<footer class="mt-16 bg-footer-bg text-slate-300">
+  <div class="container-x grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="lg:col-span-1">
+      <img src="{% static 'images/brand/logo-horizontal-white.svg' %}?v=2" alt="{{ store.store_name }}" class="h-9 w-auto">
+      <p class="mt-4 text-sm leading-relaxed text-slate-400">{{ store.about_short }}</p>
+    </div>
+    <div data-accordion class="border-b border-white/10 pb-4 sm:border-0 sm:pb-0">
+      <button type="button" data-accordion-trigger class="flex w-full items-center justify-between text-left font-semibold text-white sm:pointer-events-none" aria-expanded="false">Sản phẩm <i data-lucide="chevron-down" data-accordion-icon class="h-4 w-4 transition sm:hidden"></i></button>
+      <ul class="mt-3 hidden space-y-2 text-sm sm:block" data-accordion-panel>
+        {% for cat in nav_categories|slice:':6' %}<li><a href="{{ cat.get_absolute_url }}" class="hover:text-white">{{ cat.name }}</a></li>{% endfor %}
+      </ul>
+    </div>
+    <div data-accordion class="border-b border-white/10 pb-4 sm:border-0 sm:pb-0">
+      <button type="button" data-accordion-trigger class="flex w-full items-center justify-between text-left font-semibold text-white sm:pointer-events-none" aria-expanded="false">Hỗ trợ khách hàng <i data-lucide="chevron-down" data-accordion-icon class="h-4 w-4 transition sm:hidden"></i></button>
+      <ul class="mt-3 hidden space-y-2 text-sm sm:block" data-accordion-panel>
+        <li><a href="{% url 'core:page' 'huong-dan-mua-hang' %}" class="hover:text-white">Hướng dẫn mua hàng</a></li>
+        <li><a href="{% url 'core:page' 'chinh-sach-bao-hanh' %}" class="hover:text-white">Chính sách bảo hành</a></li>
+        <li><a href="{% url 'core:page' 'chinh-sach-doi-tra' %}" class="hover:text-white">Chính sách đổi trả</a></li>
+        <li><a href="{% url 'core:page' 'chinh-sach-van-chuyen' %}" class="hover:text-white">Chính sách vận chuyển</a></li>
+        <li><a href="{% url 'core:faq' %}" class="hover:text-white">Câu hỏi thường gặp</a></li>
+        <li><a href="{% url 'products:compatibility' %}" class="hover:text-white">Tra cứu tương thích</a></li>
+      </ul>
+    </div>
+    <div>
+      <div class="font-semibold text-white">Liên hệ</div>
+      <ul class="mt-3 space-y-2.5 text-sm">
+        {% if store.hotline %}<li class="flex items-center gap-2"><i data-lucide="phone" class="h-4 w-4 text-primary"></i><a href="tel:{{ store.hotline }}" class="hover:text-white">{{ store.hotline_display }}</a></li>{% endif %}
+        {% if store.email %}<li class="flex items-center gap-2"><i data-lucide="mail" class="h-4 w-4 text-primary"></i><a href="mailto:{{ store.email }}" class="break-all hover:text-white">{{ store.email }}</a></li>{% endif %}
+        {% if store.working_hours %}<li class="flex items-center gap-2"><i data-lucide="clock" class="h-4 w-4 text-primary"></i>{{ store.working_hours }}</li>{% endif %}
+        {% if store.address %}<li class="flex items-start gap-2"><i data-lucide="map-pin" class="mt-0.5 h-4 w-4 text-primary"></i>{{ store.address }}</li>{% endif %}
+        <li><a href="{% url 'core:contact' %}" class="hover:text-white">Gửi tin nhắn liên hệ →</a></li>
+      </ul>
+    </div>
+    {% if store.has_social %}
+      <div>
+        <div class="font-semibold text-white">Kết nối</div>
+        <ul class="mt-3 space-y-3 text-sm">
+          {% if store.zalo_url %}
+            <li><a href="{{ store.zalo_url }}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 hover:text-white">
+              <svg class="h-9 w-9 shrink-0 transition group-hover:scale-110" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#0068FF"/><path fill="#fff" d="M24 11c-8.3 0-15 5.7-15 12.7 0 4 2.2 7.6 5.7 9.9-.3 1.9-1.3 3.6-2.6 4.6 3.1.2 5.8-.9 7.7-2.6 1.3.3 2.7.5 4.2.5 8.3 0 15-5.7 15-12.6S32.3 11 24 11z"/><text x="24" y="27.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="9.5" font-weight="700" fill="#0068FF">Zalo</text></svg>
+              <span><span class="block font-semibold text-white">Zalo</span><span class="text-slate-400">{{ store.hotline_display }}</span></span>
+            </a></li>
+          {% endif %}
+          {% if store.facebook_url %}
+            <li><a href="{{ store.facebook_url }}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 hover:text-white">
+              <svg class="h-9 w-9 shrink-0 transition group-hover:scale-110" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#1877F2"/><path fill="#fff" d="M26.6 38V26.4h3.9l.6-4.5h-4.5v-2.9c0-1.3.4-2.2 2.2-2.2h2.4v-4c-.4-.1-1.8-.2-3.5-.2-3.4 0-5.8 2.1-5.8 6v3.3h-3.9v4.5h3.9V38h4.7z"/></svg>
+              <span><span class="block font-semibold text-white">Facebook</span><span class="text-slate-400">iParts Store</span></span>
+            </a></li>
+          {% endif %}
+          {% if store.messenger_url %}
+            <li><a href="{{ store.messenger_url }}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 hover:text-white">
+              <svg class="h-9 w-9 shrink-0 transition group-hover:scale-110" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="footer-msg-grad" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#0099FF"/><stop offset=".6" stop-color="#A033FF"/><stop offset=".9" stop-color="#FF5280"/><stop offset="1" stop-color="#FF7061"/></linearGradient></defs><circle cx="24" cy="24" r="24" fill="url(#footer-msg-grad)"/><path fill="#fff" d="M24 10c-7.9 0-14 5.8-14 13.6 0 4.1 1.7 7.6 4.4 10.1.2.2.4.5.4.9l.1 2.5c0 .8.9 1.3 1.6 1l2.8-1.2c.2-.1.5-.1.8 0 1.3.4 2.6.5 3.9.5 7.9 0 14-5.8 14-13.6S31.9 10 24 10z"/><path fill="url(#footer-msg-grad)" d="M15.6 27.6l4.1-6.5c.7-1 2-1.3 3-.6l3.3 2.4c.3.2.7.2 1 0l4.4-3.4c.6-.5 1.4.3 1 .9l-4.1 6.5c-.7 1-2 1.3-3 .6l-3.3-2.4c-.3-.2-.7-.2-1 0l-4.4 3.4c-.6.5-1.4-.3-1-.9z"/></svg>
+              <span><span class="block font-semibold text-white">Messenger</span><span class="text-slate-400">Chat với nhân viên</span></span>
+            </a></li>
+          {% endif %}
+          {% if store.telegram_url %}
+            <li><a href="{{ store.telegram_url }}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-3 hover:text-white">
+              <svg class="h-9 w-9 shrink-0 transition group-hover:scale-110" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#29A9EB"/><path fill="#fff" d="M11.5 23.4l20.2-7.8c.9-.3 1.8.2 1.5 1.6l-3.4 16.2c-.3 1.2-1 1.4-2 .9l-5.2-3.8-2.5 2.4c-.3.3-.5.5-1 .5l.4-5.3 9.6-8.7c.4-.4-.1-.6-.6-.2l-11.9 7.5-5.1-1.6c-1.1-.4-1.1-1.1.1-1.6z"/></svg>
+              <span><span class="block font-semibold text-white">Telegram</span><span class="text-slate-400">Nhận hỗ trợ nhanh</span></span>
+            </a></li>
+          {% endif %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+  <div class="border-t border-white/10">
+    <div class="container-x flex flex-col items-center justify-between gap-2 py-5 text-xs text-slate-400 md:flex-row">
+      <p>© {% now 'Y' %} {{ store.store_name }}. Bảo lưu mọi quyền. <span class="text-slate-500">Website được xây dựng cho mục đích đồ án tốt nghiệp.</span></p>
+      <div class="flex gap-4">
+        <a href="{% url 'core:page' 'dieu-khoan' %}" class="hover:text-white">Điều khoản sử dụng</a>
+        <a href="{% url 'core:page' 'chinh-sach-bao-mat' %}" class="hover:text-white">Chính sách bảo mật</a>
+      </div>
+    </div>
+  </div>
+</footer>

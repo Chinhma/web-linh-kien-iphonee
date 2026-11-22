@@ -1,0 +1,22 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="grid gap-4 lg:grid-cols-2">
+  <section class="card overflow-x-auto">
+    <h2 class="px-5 pt-5 font-bold">Trạng thái cấu hình tích hợp</h2>
+    <table class="data-table mt-2">
+      <thead><tr><th>Dịch vụ</th><th>Trạng thái</th><th>Biến môi trường (.env)</th></tr></thead>
+      <tbody>{% for name, ok, env in checks %}<tr><td class="font-medium">{{ name }}</td><td>{% if ok %}<span class="badge-success">Đã cấu hình</span>{% else %}<span class="badge-warning">Chưa cấu hình</span>{% endif %}</td><td class="text-xs text-muted">{{ env }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <p class="p-5 pt-3 text-xs text-muted">Giá trị key không bao giờ được hiển thị. Xem README để biết cách cấu hình.</p>
+  </section>
+  <section class="card p-5">
+    <h2 class="mb-3 font-bold">Môi trường</h2>
+    <dl class="space-y-1.5">
+      <div class="flex justify-between"><dt class="text-muted">Python</dt><dd>{{ python_version }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Django</dt><dd>{{ django_version }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Chế độ DEBUG</dt><dd>{% if debug %}<span class="badge-warning">Bật (môi trường phát triển)</span>{% else %}<span class="badge-success">Tắt</span>{% endif %}</dd></div>
+      {% for label, value in counts.items %}<div class="flex justify-between"><dt class="text-muted">{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+    </dl>
+  </section>
+</div>
+{% endblock %}

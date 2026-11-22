@@ -1,0 +1,46 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+{% if new_credential %}
+  <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm" role="alert">
+    <p class="font-bold text-amber-900"><i data-lucide="key-round" class="mr-1 inline h-4 w-4"></i>Mật khẩu tạm – chỉ hiển thị một lần</p>
+    <p class="mt-1">Tên đăng nhập: <code class="font-semibold">{{ new_credential.login }}</code> · Email: {{ new_credential.email }}</p>
+    <p class="mt-1 flex items-center gap-2">Mật khẩu: <code class="rounded bg-white px-2 py-1 text-base font-bold" data-temp-pass>{{ new_credential.password }}</code>
+      <button type="button" class="btn-secondary btn-sm" onclick="navigator.clipboard.writeText(document.querySelector('[data-temp-pass]').textContent);this.textContent='Đã sao chép'">Sao chép</button></p>
+    <p class="mt-1 text-xs text-amber-800">Hãy gửi cho người dùng qua kênh an toàn và yêu cầu đổi mật khẩu ngay sau khi đăng nhập.</p>
+  </div>
+{% endif %}
+<div class="grid gap-4 xl:grid-cols-[1fr_380px]">
+  <section class="card overflow-x-auto">
+    <table class="data-table">
+      <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Đăng nhập cuối</th><th>Trạng thái</th><th class="text-right">Hành động</th></tr></thead>
+      <tbody>
+        {% for a in admins %}
+          <tr>
+            <td><div class="font-medium">{{ a.display_name }}{% if a == user %} <span class="badge-primary">Bạn</span>{% endif %}</div><div class="text-xs text-muted">{{ a.email }}</div></td>
+            <td>{% if a.is_superuser %}<span class="badge-primary-strong">Superuser</span>{% else %}<span class="badge-primary">Admin</span>{% endif %}</td>
+            <td class="text-muted">{{ a.last_login|dt|default:'—' }}</td>
+            <td>{% if a.is_active %}<span class="badge-success">Hoạt động</span>{% else %}<span class="badge-danger">Đã khóa</span>{% endif %}</td>
+            <td class="whitespace-nowrap text-right">
+              {% if a == user %}<a href="{% url 'dashboard:profile' %}" class="btn-ghost btn-sm">Hồ sơ của tôi</a>{% else %}
+                <form method="post" action="{% url 'dashboard:admin_account_action' a.pk %}" class="inline" data-confirm="Đổi vai trò của {{ a.email }} thành {% if a.is_superuser %}Admin{% else %}Superuser{% endif %}?" data-confirm-danger="0">{% csrf_token %}<input type="hidden" name="action" value="superuser"><button class="btn-ghost btn-sm">{% if a.is_superuser %}Đổi thành Admin{% else %}Đổi thành Superuser{% endif %}</button></form>
+              <form method="post" action="{% url 'dashboard:admin_account_action' a.pk %}" class="inline" data-confirm="{% if a.is_active %}Khóa{% else %}Mở khóa{% endif %} tài khoản {{ a.email }}?">{% csrf_token %}<input type="hidden" name="action" value="lock"><button class="btn-ghost btn-sm">{% if a.is_active %}Khóa{% else %}Mở khóa{% endif %}</button></form>
+              <form method="post" action="{% url 'dashboard:admin_account_action' a.pk %}" class="inline" data-confirm="Thu hồi quyền quản trị của {{ a.email }}? Tài khoản sẽ trở thành khách hàng." data-confirm-ok="Thu hồi">{% csrf_token %}<input type="hidden" name="action" value="revoke"><button class="btn-ghost btn-sm text-danger">Thu hồi quyền</button></form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <form method="post" class="card space-y-4 p-5" novalidate>
+    {% csrf_token %}
+    <h2 class="font-bold">Tạo tài khoản Admin mới</h2>
+    {% include 'includes/components/field.html' with field=form.full_name %}
+    {% include 'includes/components/field.html' with field=form.email %}
+    {% include 'includes/components/field.html' with field=form.password password=True %}
+    {% include 'includes/components/field.html' with field=form.is_superuser %}
+    <button class="btn-primary">Tạo tài khoản</button>
+    <p class="form-hint">Không thể tự khóa/thu hồi chính mình, và không thể khóa/thu hồi Superuser cuối cùng.</p>
+  </form>
+</div>
+{% endblock %}

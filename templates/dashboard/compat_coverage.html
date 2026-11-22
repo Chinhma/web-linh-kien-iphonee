@@ -1,0 +1,31 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:compat_matrix' %}" class="btn-secondary"><i data-lucide="grid-3x3" class="h-4 w-4"></i>Ma trận tương thích</a>{% endblock %}
+{% block content %}
+<div class="mb-4 grid gap-4 sm:grid-cols-3">
+  {% include 'dashboard/components/stat_card.html' with icon='smartphone' label='Dòng iPhone đang hoạt động' value=rows|length %}
+  {% include 'dashboard/components/stat_card.html' with icon='layers' label='Nhóm linh kiện' value=groups|length %}
+  {% include 'dashboard/components/stat_card.html' with icon='alert-triangle' color='bg-amber-100 text-warning' label='Ô chưa có linh kiện' value=zero sub=zero_sub %}
+</div>
+<div class="card overflow-auto" style="max-height: 75vh">
+  <table class="w-full text-sm">
+    <thead><tr>
+      <th class="sticky left-0 top-0 z-20 bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase text-muted">Dòng iPhone</th>
+      {% for g in groups %}<th class="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-center text-xs font-semibold text-muted"><i data-lucide="{{ g.icon }}" class="mx-auto mb-1 h-4 w-4"></i>{{ g.name }}</th>{% endfor %}
+    </tr></thead>
+    <tbody>
+      {% for row in rows %}
+        <tr class="border-t border-border">
+          <th class="sticky left-0 z-10 whitespace-nowrap bg-white px-4 py-2 text-left font-medium"><a href="{% url 'dashboard:iphone_edit' row.model.pk %}" class="hover:text-primary">{{ row.model.name }}</a></th>
+          {% for g, n in row.cells %}
+            <td class="p-1 text-center">
+              {% if n %}<a href="{% url 'dashboard:compat_list' %}?model={{ row.model.slug }}&category={{ g.slug }}" class="block rounded-lg bg-green-50 py-1.5 font-semibold text-green-700 hover:bg-green-100">{{ n }}</a>
+              {% else %}<a href="{% url 'dashboard:compat_add' %}?model={{ row.model.pk }}" class="block rounded-lg bg-amber-100 py-1.5 font-semibold text-amber-700 hover:bg-amber-200" title="Thêm linh kiện tương thích">0</a>{% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="mt-3 text-xs text-muted">Bấm ô số để xem danh sách tương thích; bấm ô vàng (0) để thêm tương thích cho dòng máy đó.</p>
+{% endblock %}

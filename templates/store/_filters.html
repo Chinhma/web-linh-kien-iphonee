@@ -1,0 +1,61 @@
+{# Bộ lọc sản phẩm – dùng cho sidebar desktop và drawer mobile. Tham số nằm trên URL. #}
+<form method="get" class="space-y-6 text-sm" data-filter-form>
+  {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+  <input type="hidden" name="sort" value="{{ sort }}">
+  {% if not category %}
+  <fieldset>
+    <legend class="mb-2 font-semibold">Loại linh kiện</legend>
+    <div class="space-y-1.5">
+      {% for cat in filter_categories %}
+        <label class="flex items-center gap-2"><input type="checkbox" name="category" value="{{ cat.slug }}" class="form-check" {% if cat.slug in selected_categories %}checked{% endif %}> {{ cat.name }}</label>
+        {% for child in cat.children.all %}
+          <label class="ml-6 flex items-center gap-2 text-muted"><input type="checkbox" name="category" value="{{ child.slug }}" class="form-check" {% if child.slug in selected_categories %}checked{% endif %}> {{ child.name }}</label>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+  <fieldset>
+    <legend class="mb-2 font-semibold">Dòng iPhone</legend>
+    <select name="model" class="form-input" aria-label="Dòng iPhone">
+      <option value="">Tất cả dòng máy</option>
+      {% for group in iphone_groups %}
+        <optgroup label="{{ group.label }}">{% for m in group.models %}<option value="{{ m.slug }}" {% if request.GET.model == m.slug %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</optgroup>
+      {% endfor %}
+    </select>
+  </fieldset>
+  <fieldset>
+    <legend class="mb-2 font-semibold">Chất lượng</legend>
+    <div class="space-y-1.5">
+      {% for value, label in quality_choices %}
+        <label class="flex items-center gap-2"><input type="checkbox" name="quality" value="{{ value }}" class="form-check" {% if value in selected_qualities %}checked{% endif %}> {{ label }}</label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% if filter_brands %}
+  <fieldset>
+    <legend class="mb-2 font-semibold">Thương hiệu</legend>
+    <div class="space-y-1.5">
+      {% for brand in filter_brands %}
+        <label class="flex items-center gap-2"><input type="checkbox" name="brand" value="{{ brand.slug }}" class="form-check" {% if brand.slug in selected_brands %}checked{% endif %}> {{ brand.name }}</label>
+      {% endfor %}
+    </div>
+  </fieldset>
+  {% endif %}
+  <fieldset>
+    <legend class="mb-2 font-semibold">Khoảng giá (₫)</legend>
+    <div class="flex items-center gap-2">
+      <input type="number" name="price_min" min="0" step="10000" value="{{ request.GET.price_min }}" placeholder="Từ" class="form-input" aria-label="Giá từ">
+      <span class="text-muted">–</span>
+      <input type="number" name="price_max" min="0" step="10000" value="{{ request.GET.price_max }}" placeholder="Đến" class="form-input" aria-label="Giá đến">
+    </div>
+  </fieldset>
+  <fieldset class="space-y-1.5">
+    <label class="flex items-center gap-2"><input type="checkbox" name="in_stock" value="1" class="form-check" {% if request.GET.in_stock == '1' %}checked{% endif %}> Chỉ hiện còn hàng</label>
+    {% if not fixed_on_sale %}<label class="flex items-center gap-2"><input type="checkbox" name="on_sale" value="1" class="form-check" {% if request.GET.on_sale == '1' %}checked{% endif %}> Đang giảm giá</label>{% endif %}
+  </fieldset>
+  <div class="flex gap-2">
+    <button type="submit" class="btn-primary flex-1">Áp dụng</button>
+    <a href="{{ request.path }}" class="btn-secondary">Xóa lọc</a>
+  </div>
+</form>

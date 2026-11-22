@@ -1,0 +1,53 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="{% url 'dashboard:inventory_history' %}?type=import" class="btn-secondary"><i data-lucide="history" class="h-4 w-4"></i>Lịch sử nhập kho</a>{% endblock %}
+{% block content %}
+<form method="post" class="grid gap-5 xl:grid-cols-[1fr_320px]" data-dirty-check>
+  {% csrf_token %}
+  <section class="card p-5">
+    <div class="mb-4 flex items-center justify-between"><h2 class="font-bold">Danh sách hàng nhập</h2><button type="button" class="btn-secondary btn-sm" data-add-row><i data-lucide="plus" class="h-4 w-4"></i>Thêm dòng</button></div>
+    <div class="hidden grid-cols-[1fr_120px_160px_40px] gap-3 px-1 pb-2 text-xs font-semibold uppercase text-muted md:grid"><span>Sản phẩm *</span><span>Số lượng *</span><span>Giá nhập (₫)</span><span></span></div>
+    <div class="space-y-3" data-rows>
+      <div class="grid gap-3 md:grid-cols-[1fr_120px_160px_40px]" data-row>
+        {% include 'dashboard/components/product_picker.html' with name='product' preset=preset %}
+        <input type="number" name="quantity" min="1" placeholder="SL" class="form-input" aria-label="Số lượng">
+        <input type="number" name="unit_cost" min="0" step="1000" value="{{ preset.cost_price|default:'' }}" placeholder="Giá nhập" class="form-input" aria-label="Giá nhập">
+        <button type="button" class="icon-btn text-danger" data-remove-row aria-label="Xóa dòng"><i data-lucide="x" class="h-4 w-4"></i></button>
+      </div>
+    </div>
+  </section>
+  <aside class="space-y-4">
+    <section class="card space-y-3 p-5 xl:sticky xl:top-20">
+      <h2 class="font-bold">Thông tin phiếu nhập</h2>
+      <label class="form-label">Nhà cung cấp / Ghi chú<textarea name="note" rows="3" maxlength="255" class="form-input mt-1" placeholder="Ví dụ: NCC Linh Kiện ABC, hóa đơn số 123"></textarea></label>
+      <label class="flex items-center gap-2"><input type="checkbox" name="update_cost_price" checked class="form-check">Cập nhật giá nhập của sản phẩm theo giá mới</label>
+      <button type="submit" class="btn-primary w-full"><i data-lucide="package-plus" class="h-4 w-4"></i>Ghi phiếu nhập</button>
+      <a href="{% url 'dashboard:inventory' %}" class="btn-ghost w-full">Hủy</a>
+    </section>
+  </aside>
+</form>
+<template id="row-template">
+  <div class="grid gap-3 md:grid-cols-[1fr_120px_160px_40px]" data-row>
+    {% include 'dashboard/components/product_picker.html' with name='product' preset=None %}
+    <input type="number" name="quantity" min="1" placeholder="SL" class="form-input" aria-label="Số lượng">
+    <input type="number" name="unit_cost" min="0" step="1000" placeholder="Giá nhập" class="form-input" aria-label="Giá nhập">
+    <button type="button" class="icon-btn text-danger" data-remove-row aria-label="Xóa dòng"><i data-lucide="x" class="h-4 w-4"></i></button>
+  </div>
+</template>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { initProductPicker } from '{% static "js/dashboard/product-picker.js" %}';
+  const rows = document.querySelector('[data-rows]');
+  const bind = (row) => {
+    const picker = row.querySelector('[data-product-picker]');
+    initProductPicker(picker, { onSelect: (p) => { const cost = row.querySelector('[name=unit_cost]'); if (!cost.value) cost.value = p.cost_price; row.querySelector('[name=quantity]').focus(); } });
+    row.querySelector('[data-remove-row]').addEventListener('click', () => { if (rows.children.length > 1) row.remove(); });
+  };
+  rows.querySelectorAll('[data-row]').forEach(bind);
+  document.querySelector('[data-add-row]').addEventListener('click', () => {
+    rows.appendChild(document.getElementById('row-template').content.cloneNode(true));
+    const row = rows.lastElementChild; bind(row); window.lucide?.createIcons(); row.querySelector('[data-picker-input]').focus();
+  });
+</script>
+{% endblock %}

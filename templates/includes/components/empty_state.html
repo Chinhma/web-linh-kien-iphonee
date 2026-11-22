@@ -1,0 +1,6 @@
+<div class="card flex flex-col items-center px-6 py-14 text-center">
+  <span class="flex h-16 w-16 items-center justify-center rounded-full bg-primary-light text-primary"><i data-lucide="{{ icon|default:'inbox' }}" class="h-8 w-8"></i></span>
+  <h3 class="mt-4 text-lg font-semibold">{{ title }}</h3>
+  {% if description %}<p class="mt-1 max-w-md text-sm text-muted">{{ description }}</p>{% endif %}
+  {% if action_url %}<a href="{{ action_url }}" class="btn-primary mt-5">{{ action_text }}</a>{% endif %}
+</div>

@@ -1,0 +1,27 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block content %}
+<div class="grid gap-5 xl:grid-cols-2">
+  <form method="post" enctype="multipart/form-data" class="card space-y-4 p-6" data-dirty-check>
+    {% csrf_token %}<input type="hidden" name="section" value="profile">
+    <h2 class="font-bold">Thông tin cá nhân</h2>
+    <div class="flex items-center gap-4">
+      {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="" class="h-16 w-16 rounded-full object-cover">{% else %}<span class="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-bold text-white">{{ user|initials }}</span>{% endif %}
+      <div><div class="font-semibold">{{ user.email }}</div><div class="text-sm text-muted">{% if user.is_superuser %}Super Admin{% else %}Admin{% endif %} · Đăng nhập cuối: {{ user.last_login|dt|default:'—' }}</div></div>
+    </div>
+    {% include 'includes/components/field.html' with field=form.full_name %}
+    {% include 'includes/components/field.html' with field=form.phone %}
+    {% include 'includes/components/field.html' with field=form.avatar %}
+    <button type="submit" class="btn-primary">Lưu hồ sơ</button>
+  </form>
+  <form method="post" id="doi-mat-khau" class="card space-y-4 p-6">
+    {% csrf_token %}<input type="hidden" name="section" value="password">
+    <h2 class="font-bold">{% if has_password %}Đổi mật khẩu{% else %}Đặt mật khẩu{% endif %}</h2>
+    {% if has_password %}{% include 'includes/components/field.html' with field=pw_form.old_password password=True %}{% endif %}
+    {% include 'includes/components/field.html' with field=pw_form.new_password1 password=True hide_help=True %}
+    {% include 'includes/components/field.html' with field=pw_form.new_password2 password=True %}
+    <p class="form-hint">Tối thiểu 8 ký tự, có cả chữ và số.</p>
+    <button type="submit" class="btn-primary">Lưu mật khẩu</button>
+  </form>
+</div>
+{% endblock %}

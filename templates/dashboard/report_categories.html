@@ -1,0 +1,18 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block content %}
+{% include 'dashboard/_range_filter.html' %}
+<div class="mb-3 flex justify-end"><a href="?{% url_replace export='csv' %}" class="btn-ghost"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a></div>
+<div class="grid gap-4 lg:grid-cols-2">
+  <section class="card p-5"><div class="relative h-80"><canvas data-report-chart data-type="doughnut"></canvas></div></section>
+  <section class="card overflow-x-auto">
+    <table class="data-table">
+      <thead><tr><th>Danh mục</th><th>Doanh thu</th><th>SL bán</th><th>Tỉ lệ</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td>{{ r.name }}</td><td class="font-semibold">{{ r.revenue|vnd }}</td><td>{{ r.qty }}</td><td>{{ r.percent }}%</td></tr>{% empty %}<tr><td colspan="4" class="py-10 text-center text-muted">Không có dữ liệu.</td></tr>{% endfor %}</tbody>
+      {% if rows %}<tfoot><tr class="font-bold"><td class="px-4 py-3">Tổng</td><td class="px-4 py-3">{{ total|vnd }}</td><td></td><td class="px-4 py-3">100%</td></tr></tfoot>{% endif %}
+    </table>
+  </section>
+</div>
+{{ chart|json_script:'report-chart' }}
+{% endblock %}
+{% block scripts %}<script src="{% static 'vendor/chart.umd.min.js' %}"></script><script type="module" src="{% static 'js/dashboard/report-chart.js' %}"></script>{% endblock %}

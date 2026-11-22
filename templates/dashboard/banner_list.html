@@ -1,0 +1,30 @@
+{% extends 'base_admin.html' %}
+{% block page_actions %}<a href="{% url 'dashboard:banner_add' %}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm banner</a>{% endblock %}
+{% block content %}
+<p class="mb-4 text-sm text-muted">{{ total }} banner · Kéo thả thẻ để đổi thứ tự hiển thị trên trang chủ · Ảnh khuyến nghị 1600×600.</p>
+<div class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3" data-sortable-url="{% url 'dashboard:reorder' 'banner' %}">
+  {% for row in rows %}{% with b=row.obj %}
+    <article class="card cursor-grab overflow-hidden {% if not b.is_active %}opacity-70{% endif %}" data-sort-id="{{ b.pk }}">
+      <div class="relative aspect-[16/6] bg-slate-100">
+        {% if b.image %}<img src="{{ b.image.url }}" alt="" class="h-full w-full object-cover" draggable="false">{% else %}<div class="flex h-full items-center justify-center text-muted"><i data-lucide="image" class="h-8 w-8"></i></div>{% endif %}
+        <span class="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-xs font-bold text-white">#<span data-sort-index>{{ forloop.counter }}</span></span>
+      </div>
+      <div class="flex items-start gap-3 p-4">
+        <div class="min-w-0 flex-1">
+          <h2 class="truncate font-semibold">{{ b.title }}</h2>
+          <p class="truncate text-sm text-muted">{{ b.subtitle|default:'—' }}</p>
+          {% if b.button_text %}<p class="mt-1 truncate text-xs text-primary">{{ b.button_text }} → {{ b.button_url }}</p>{% endif %}
+        </div>
+        {% include 'dashboard/components/switch.html' with url_model='banner-active' obj=b on=b.is_active %}
+      </div>
+      <div class="flex justify-end gap-1 border-t border-border px-3 py-2">
+        <a href="{% url 'dashboard:banner_edit' b.pk %}" class="btn-ghost btn-sm"><i data-lucide="pencil" class="h-4 w-4"></i>Sửa</a>
+        <form method="post" action="{% url 'dashboard:banner_delete' b.pk %}" data-confirm="Xóa banner “{{ b.title }}”?" data-confirm-ok="Xóa">{% csrf_token %}<button class="btn-ghost btn-sm text-danger"><i data-lucide="trash-2" class="h-4 w-4"></i>Xóa</button></form>
+      </div>
+    </article>
+  {% endwith %}{% empty %}
+    <div class="card md:col-span-2 2xl:col-span-3">{% include 'dashboard/components/empty_state.html' with icon='image' title='Chưa có banner' action_url='/quan-tri/banner/them/' action_text='Thêm banner' %}</div>
+  {% endfor %}
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

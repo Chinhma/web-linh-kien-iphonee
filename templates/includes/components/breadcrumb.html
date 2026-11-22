@@ -1,0 +1,15 @@
+<nav aria-label="Breadcrumb" class="mb-4 text-sm text-muted">
+  <ol class="flex flex-wrap items-center gap-1.5">
+    <li><a href="{% url 'products:home' %}" class="hover:text-primary">Trang chủ</a></li>
+    {% for crumb in breadcrumbs %}
+      <li class="flex items-center gap-1.5">
+        <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+        {% if crumb.1 and not forloop.last %}
+          <a href="{{ crumb.1 }}" class="hover:text-primary">{{ crumb.0 }}</a>
+        {% else %}
+          <span class="text-text" aria-current="page">{{ crumb.0 }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

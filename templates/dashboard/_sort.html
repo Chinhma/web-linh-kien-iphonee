@@ -1,0 +1,1 @@
+<a href="?{% if sort == key %}{% url_replace sort='-'|add:key page='' %}{% else %}{% url_replace sort=key page='' %}{% endif %}" class="sort-link {% if sort == key or sort == '-'|add:key %}text-text{% endif %}">{{ label }}{% if sort == key %} ↑{% elif sort == '-'|add:key %} ↓{% endif %}</a>

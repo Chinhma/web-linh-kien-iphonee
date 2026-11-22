@@ -1,0 +1,112 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}
+  <a href="?{% url_replace export='csv' %}" class="btn-secondary"><i data-lucide="download" class="h-4 w-4"></i>Xuất CSV</a>
+  <a href="{% url 'dashboard:product_add' %}" class="btn-primary"><i data-lucide="plus" class="h-4 w-4"></i>Thêm sản phẩm</a>
+{% endblock %}
+{% block content %}
+<div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/components/stat_card.html' with icon='package' label='Tổng sản phẩm' value=stats.total url='?' %}
+  {% include 'dashboard/components/stat_card.html' with icon='badge-check' color='bg-green-100 text-success' label='Đang bán' value=stats.active url='?status=active' %}
+  {% include 'dashboard/components/stat_card.html' with icon='alert-triangle' color='bg-amber-100 text-warning' label='Sắp hết hàng' value=stats.low url='?stock=low' %}
+  {% include 'dashboard/components/stat_card.html' with icon='package-x' color='bg-red-100 text-danger' label='Hết hàng' value=stats.out url='?stock=out' %}
+</div>
+
+<form method="get" class="card mb-3 flex flex-wrap items-center gap-2 p-3">
+  <div class="relative"><i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i><input name="q" value="{{ q }}" data-auto-search placeholder="Tên, SKU, mã linh kiện" class="form-input w-60 py-2 pl-9" aria-label="Tìm sản phẩm"></div>
+  <select name="category" data-autosubmit class="form-input w-auto py-2" aria-label="Danh mục">
+    <option value="">Tất cả danh mục</option>
+    {% for c in category_tree %}
+      <option value="{{ c.slug }}" {% if request.GET.category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+      {% for child in c.children.all %}<option value="{{ child.slug }}" {% if request.GET.category == child.slug %}selected{% endif %}>&nbsp;&nbsp;└ {{ child.name }}</option>{% endfor %}
+    {% endfor %}
+  </select>
+  <select name="model" data-autosubmit class="form-input w-auto py-2" aria-label="Dòng iPhone"><option value="">Dòng iPhone</option>{% for g in iphone_groups %}<optgroup label="{{ g.label }}">{% for m in g.models %}<option value="{{ m.slug }}" {% if request.GET.model == m.slug %}selected{% endif %}>{{ m.name }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+  <select name="quality" data-autosubmit class="form-input w-auto py-2" aria-label="Chất lượng"><option value="">Chất lượng</option>{% for v, l in qualities %}<option value="{{ v }}" {% if request.GET.quality == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="status" data-autosubmit class="form-input w-auto py-2" aria-label="Trạng thái"><option value="">Trạng thái</option>{% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="stock" data-autosubmit class="form-input w-auto py-2" aria-label="Tình trạng kho"><option value="">Tình trạng kho</option><option value="in" {% if request.GET.stock == 'in' %}selected{% endif %}>Còn hàng</option><option value="low" {% if request.GET.stock == 'low' %}selected{% endif %}>Sắp hết</option><option value="out" {% if request.GET.stock == 'out' %}selected{% endif %}>Hết hàng</option></select>
+  <label class="flex items-center gap-1.5 text-sm"><input type="checkbox" name="on_sale" value="1" class="form-check" data-autosubmit {% if request.GET.on_sale == '1' %}checked{% endif %}>Đang giảm giá</label>
+  {% if has_filters %}<a href="?" class="btn-ghost btn-sm"><i data-lucide="x" class="h-4 w-4"></i>Xóa bộ lọc</a>{% endif %}
+  <span class="ml-auto text-sm text-muted">{{ total }} sản phẩm</span>
+</form>
+
+<form id="bulk-form" method="post" action="{% url 'dashboard:product_bulk' %}" data-bulk-form>
+  {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+  <div data-bulk-bar="bulk-form" hidden class="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-footer-bg px-4 py-2.5 text-sm text-white">
+    <span>Đã chọn <strong data-bulk-count>0</strong> sản phẩm:</span>
+    <button type="submit" name="action" value="active" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Đang bán</button>
+    <button type="submit" name="action" value="draft" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Nháp</button>
+    <button type="submit" name="action" value="discontinued" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Ngừng kinh doanh</button>
+    <button type="submit" name="action" value="feature" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Bật nổi bật</button>
+    <button type="submit" name="action" value="unfeature" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Tắt nổi bật</button>
+    <button type="submit" name="action" value="export" class="btn-sm rounded-lg bg-white/10 px-3 py-1.5 hover:bg-white/20">Xuất CSV</button>
+  </div>
+</form>
+
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr>
+      <th class="w-8"><input type="checkbox" class="form-check" data-check-all="bulk-form" aria-label="Chọn tất cả"></th><th>Ảnh</th>
+      <th>{% include 'dashboard/_sort.html' with key='name' label='Tên / SKU' %}</th><th>Danh mục</th><th>Chất lượng</th>
+      <th>{% include 'dashboard/_sort.html' with key='price' label='Giá bán' %}</th><th>{% include 'dashboard/_sort.html' with key='stock' label='Tồn kho' %}</th>
+      <th>{% include 'dashboard/_sort.html' with key='sold' label='Đã bán' %}</th><th>Trạng thái</th><th>Nổi bật</th><th class="text-right">Hành động</th>
+    </tr></thead>
+    <tbody>
+      {% for p in page_obj %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ p.pk }}" form="bulk-form" class="form-check" aria-label="Chọn {{ p.name }}"></td>
+          <td><img src="{{ p.image_url }}" alt="" class="h-11 w-11 rounded-lg object-cover"></td>
+          <td data-label="Sản phẩm" class="max-w-xs"><a href="{% url 'dashboard:product_edit' p.pk %}" class="line-clamp-2 font-semibold hover:text-primary">{{ p.name }}</a><div class="text-xs text-muted">{{ p.sku }}{% if p.part_code %} · {{ p.part_code }}{% endif %}</div></td>
+          <td data-label="Danh mục" class="text-muted">{{ p.category.name }}</td>
+          <td data-label="Chất lượng"><span class="badge-muted">{{ p.get_quality_grade_display }}</span></td>
+          <td data-label="Giá bán" class="whitespace-nowrap"><div class="font-semibold">{{ p.effective_price|vnd }}</div>{% if p.is_on_sale %}<div class="text-xs text-muted line-through">{{ p.price|vnd }}</div>{% endif %}</td>
+          <td data-label="Tồn kho"><span class="badge-{{ p.stock_status|badge_color }}">{{ p.stock_quantity }}</span></td>
+          <td data-label="Đã bán">{{ p.sold_count }}</td>
+          <td data-label="Trạng thái">{% status_badge p.status p.get_status_display %}</td>
+          <td data-label="Nổi bật">
+            <button type="button" role="switch" aria-checked="{{ p.is_featured|yesno:'true,false' }}" data-toggle-url="{% url 'dashboard:toggle_field' 'product-featured' p.pk %}" data-field="is_featured"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-200 transition [&.is-on]:bg-primary {% if p.is_featured %}is-on{% endif %} [&.is-on>span]:translate-x-5" aria-label="Bật/tắt nổi bật">
+              <span class="ml-0.5 inline-block h-5 w-5 rounded-full bg-white shadow transition"></span>
+            </button>
+          </td>
+          <td class="whitespace-nowrap text-right">
+            <a href="{{ p.get_absolute_url }}" target="_blank" class="btn-ghost btn-sm" title="Xem trên website"><i data-lucide="external-link" class="h-4 w-4"></i></a>
+            <a href="{% url 'dashboard:product_edit' p.pk %}" class="btn-ghost btn-sm" title="Sửa"><i data-lucide="pencil" class="h-4 w-4"></i></a>
+            <a href="{% url 'dashboard:inventory_import' %}?product={{ p.pk }}" class="btn-ghost btn-sm text-success" title="Nhập kho"><i data-lucide="package-plus" class="h-4 w-4"></i></a>
+            <button type="button" class="btn-ghost btn-sm" title="Nhân bản sang dòng máy khác" data-duplicate="{% url 'dashboard:product_duplicate' p.pk %}" data-name="{{ p.name }}"><i data-lucide="copy" class="h-4 w-4"></i></button>
+            <form method="post" action="{% url 'dashboard:product_delete' p.pk %}" class="inline" data-confirm="Xóa “{{ p.name }}”? Nếu sản phẩm đã có trong đơn hàng sẽ không xóa mà chuyển sang Ngừng kinh doanh." data-confirm-ok="Xóa">{% csrf_token %}<button class="btn-ghost btn-sm text-danger" title="Ngừng kinh doanh / Xóa"><i data-lucide="trash-2" class="h-4 w-4"></i></button></form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="11">{% include 'dashboard/components/empty_state.html' with icon='package' title='Chưa có sản phẩm phù hợp' action_url='/quan-tri/san-pham/them/' action_text='Thêm sản phẩm' %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+
+<div id="duplicate-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="dup-title">
+  <form method="post" class="relative w-full max-w-md space-y-4 rounded-modal bg-white p-6" data-duplicate-form>
+    {% csrf_token %}
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="dup-title" class="text-lg font-bold">Nhân bản sang dòng máy khác</h2>
+    <p class="text-sm text-muted" data-dup-name></p>
+    <label class="form-label block">Dòng iPhone đích
+      <select name="iphone_model" class="form-input mt-1"><option value="">— Giữ nguyên tương thích như bản gốc —</option>{% for g in iphone_groups %}<optgroup label="{{ g.label }}">{% for m in g.models %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+    </label>
+    <p class="form-hint">Bản sao ở trạng thái Nháp, tồn kho 0, tên tự đổi theo dòng máy mới; tương thích mới ở trạng thái "Chưa xác nhận".</p>
+    <div class="flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Nhân bản</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module">
+  import { openModal } from '{% static "js/core/modal.js" %}';
+  document.querySelectorAll('[data-duplicate]').forEach((b) => b.addEventListener('click', () => {
+    const form = document.querySelector('[data-duplicate-form]');
+    form.action = b.dataset.duplicate;
+    document.querySelector('[data-dup-name]').textContent = b.dataset.name;
+    openModal('duplicate-modal');
+  }));
+</script>
+{% endblock %}

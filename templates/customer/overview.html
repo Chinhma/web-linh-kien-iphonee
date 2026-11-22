@@ -1,0 +1,17 @@
+{% extends 'customer/_base.html' %}
+{% block title %}Tài khoản của tôi{% endblock %}
+{% block account_content %}
+<h1 class="text-2xl">Xin chào, {{ user.display_name }}!</h1>
+<p class="mt-1 text-sm text-muted">Quản lý đơn hàng, địa chỉ và thông tin tài khoản của bạn.</p>
+<div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+  <a href="{% url 'orders:list' %}" class="card card-hover p-4"><i data-lucide="package" class="h-6 w-6 text-primary"></i><div class="mt-2 text-2xl font-bold">{{ stats.total }}</div><div class="text-sm text-muted">Tổng đơn hàng</div></a>
+  <a href="{% url 'orders:list' %}?tab=processing" class="card card-hover p-4"><i data-lucide="loader" class="h-6 w-6 text-warning"></i><div class="mt-2 text-2xl font-bold">{{ stats.processing }}</div><div class="text-sm text-muted">Đang xử lý</div></a>
+  <a href="{% url 'orders:list' %}?tab=delivered" class="card card-hover p-4"><i data-lucide="check-circle-2" class="h-6 w-6 text-success"></i><div class="mt-2 text-2xl font-bold">{{ stats.done }}</div><div class="text-sm text-muted">Đã hoàn thành</div></a>
+  <a href="{% url 'cart:wishlist' %}" class="card card-hover p-4"><i data-lucide="heart" class="h-6 w-6 text-danger"></i><div class="mt-2 text-2xl font-bold">{{ wishlist_count_total }}</div><div class="text-sm text-muted">Sản phẩm yêu thích</div></a>
+</div>
+<div class="card mt-6 overflow-hidden">
+  <div class="flex items-center justify-between border-b border-border px-4 py-3"><h2 class="font-bold">Đơn hàng gần đây</h2><a href="{% url 'orders:list' %}" class="link text-sm">Xem tất cả</a></div>
+  {% for order in recent_orders %}{% include 'customer/_order_row.html' %}
+  {% empty %}<p class="p-6 text-center text-sm text-muted">Bạn chưa có đơn hàng nào. <a href="{% url 'products:list' %}" class="link">Mua sắm ngay</a></p>{% endfor %}
+</div>
+{% endblock %}

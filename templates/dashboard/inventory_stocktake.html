@@ -1,0 +1,18 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="{% url 'dashboard:inventory_history' %}?type=adjustment" class="btn-secondary"><i data-lucide="history" class="h-4 w-4"></i>Lịch sử điều chỉnh</a>{% endblock %}
+{% block content %}
+<form method="post" class="card max-w-2xl space-y-4 p-6" data-dirty-check>
+  {% csrf_token %}
+  <div><span class="form-label">Sản phẩm <span class="text-danger">*</span></span>{% include 'dashboard/components/product_picker.html' with name='product' preset=preset required=True %}</div>
+  <label class="form-label block">Số tồn thực tế <span class="text-danger">*</span>
+    <input type="number" name="actual_quantity" min="0" required class="form-input mt-1" placeholder="Số lượng đếm được khi kiểm kê">
+    <span class="form-hint block font-normal">Hệ thống tự tính chênh lệch so với tồn hiện tại và ghi vào lịch sử với loại "Điều chỉnh kiểm kê".</span>
+  </label>
+  <label class="form-label block">Lý do <span class="text-danger">*</span>
+    <input name="reason" maxlength="255" required class="form-input mt-1" placeholder="Ví dụ: Kiểm kê cuối tháng, hàng lỗi, thất lạc...">
+  </label>
+  <div class="flex gap-2"><button type="submit" class="btn-primary">Điều chỉnh tồn kho</button><a href="{% url 'dashboard:inventory' %}" class="btn-ghost">Hủy</a></div>
+</form>
+{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/dashboard/product-picker.js' %}"></script>{% endblock %}

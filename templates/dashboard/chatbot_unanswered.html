@@ -1,0 +1,23 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="card overflow-x-auto">
+  <table class="data-table responsive-cards">
+    <thead><tr><th>Câu hỏi của khách</th><th>Dòng máy / Linh kiện được hỏi</th><th>Thời gian</th><th class="text-right">Bổ sung dữ liệu</th></tr></thead>
+    <tbody>
+      {% for r in page_obj %}
+        <tr>
+          <td data-label="Câu hỏi" class="max-w-md"><a href="{% url 'dashboard:chat_detail' r.conversation.pk %}" class="hover:text-primary">“{{ r.question|truncatechars:120 }}”</a>
+            <div class="text-xs text-muted">{% if r.conversation.user %}{{ r.conversation.user.email }}{% else %}Khách vãng lai{% endif %}</div></td>
+          <td data-label="Đã hỏi">{% if r.model %}<span class="badge-primary">{{ r.model }}</span>{% endif %} {% if r.category %}<span class="badge-muted">{{ r.category }}</span>{% endif %}{% if not r.model and not r.category %}<span class="text-muted">—</span>{% endif %}</td>
+          <td data-label="Thời gian" class="whitespace-nowrap text-muted">{{ r.time|dt }}</td>
+          <td class="whitespace-nowrap text-right">
+            <a href="{% url 'dashboard:product_add' %}" class="btn-secondary btn-sm"><i data-lucide="plus" class="h-4 w-4"></i>Thêm sản phẩm</a>
+            <a href="{% url 'dashboard:compat_add' %}{% if r.model_pk %}?model={{ r.model_pk }}{% endif %}" class="btn-primary btn-sm"><i data-lucide="git-compare-arrows" class="h-4 w-4"></i>Thêm tương thích</a>
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="4">{% include 'dashboard/components/empty_state.html' with icon='message-circle-question' title='Chatbot đã trả lời được mọi câu hỏi' %}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

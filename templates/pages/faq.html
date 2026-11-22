@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Câu hỏi thường gặp{% endblock %}
+{% block content %}
+<div class="container-x max-w-3xl py-6">
+  {% include 'includes/components/breadcrumb.html' %}
+  <h1 class="mb-6 text-2xl md:text-3xl">Câu hỏi thường gặp</h1>
+  <div class="space-y-3">
+    {% for faq in faqs %}
+      <div class="card" data-accordion>
+        <button type="button" data-accordion-trigger aria-expanded="false" class="flex w-full items-center justify-between gap-4 p-5 text-left font-semibold">{{ faq.question }}<i data-lucide="chevron-down" data-accordion-icon class="h-5 w-5 shrink-0 transition"></i></button>
+        <div class="hidden px-5 pb-5 text-sm leading-relaxed text-muted">{{ faq.answer|linebreaksbr }}</div>
+      </div>
+    {% empty %}
+      {% include 'includes/components/empty_state.html' with icon='help-circle' title='Chưa có câu hỏi nào' %}
+    {% endfor %}
+  </div>
+  <div class="card mt-8 flex flex-col items-center gap-3 p-6 text-center">
+    <p class="font-semibold">Chưa tìm thấy câu trả lời?</p>
+    <div class="flex flex-wrap justify-center gap-2"><button type="button" data-open-chat class="btn-primary">Hỏi iParts AI Assistant</button><a href="{% url 'core:contact' %}" class="btn-secondary">Liên hệ cửa hàng</a></div>
+  </div>
+</div>
+{% endblock %}

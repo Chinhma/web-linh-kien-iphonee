@@ -1,0 +1,113 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}
+  <form method="get" class="flex flex-wrap items-center gap-2" data-range-form>
+    <select name="range" class="form-input w-auto py-2" data-range-select aria-label="Khoảng thời gian">
+      {% for key, label in range_labels.items %}<option value="{{ key }}" {% if range_key == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <span class="flex items-center gap-1 {% if range_key != 'custom' %}hidden{% endif %}" data-custom-range>
+      <input type="date" name="from" value="{{ date_from }}" class="form-input w-auto py-1.5" aria-label="Từ ngày">
+      <span class="text-muted">–</span>
+      <input type="date" name="to" value="{{ date_to }}" class="form-input w-auto py-1.5" aria-label="Đến ngày">
+      <button type="submit" class="btn-primary btn-sm">Áp dụng</button>
+    </span>
+  </form>
+{% endblock %}
+{% block content %}
+{% with s=stats %}
+{# Hàng 1 – 4 thẻ KPI #}
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/_stat.html' with icon='wallet' color='bg-primary-light text-primary' label='Doanh thu' value=s.revenue|vnd change=s.revenue_change %}
+  {% include 'dashboard/_stat.html' with icon='shopping-bag' color='bg-amber-100 text-warning' label='Số đơn hàng' value=s.orders change=s.orders_change %}
+  {% include 'dashboard/_stat.html' with icon='user-plus' color='bg-green-100 text-success' label='Khách hàng mới' value=s.new_customers change=s.new_customers_change %}
+  {% include 'dashboard/_stat.html' with icon='receipt' color='bg-violet-100 text-violet-600' label='Giá trị đơn trung bình' value=s.aov|vnd change=s.aov_change %}
+</div>
+{# Hàng 2 – 4 thẻ cảnh báo #}
+<div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+  <a href="{% url 'dashboard:order_list' %}?status=pending" class="card card-hover flex items-center justify-between border-l-4 border-l-warning p-4"><span class="flex items-center gap-2 text-sm"><i data-lucide="clock" class="h-4 w-4 text-warning"></i>Đơn chờ xác nhận</span><strong class="text-lg">{{ s.pending_orders }}</strong></a>
+  <a href="{% url 'dashboard:product_list' %}?stock=low" class="card card-hover flex items-center justify-between border-l-4 border-l-warning p-4"><span class="flex items-center gap-2 text-sm"><i data-lucide="alert-triangle" class="h-4 w-4 text-warning"></i>Sản phẩm sắp hết hàng</span><strong class="text-lg">{{ s.low_stock }}</strong></a>
+  <a href="{% url 'dashboard:product_list' %}?stock=out" class="card card-hover flex items-center justify-between border-l-4 border-l-danger p-4"><span class="flex items-center gap-2 text-sm"><i data-lucide="package-x" class="h-4 w-4 text-danger"></i>Sản phẩm hết hàng</span><strong class="text-lg">{{ s.out_of_stock }}</strong></a>
+  <a href="{% url 'dashboard:review_list' %}?status=pending" class="card card-hover flex items-center justify-between border-l-4 border-l-primary p-4"><span class="flex items-center gap-2 text-sm"><i data-lucide="star" class="h-4 w-4 text-primary"></i>Đánh giá chờ duyệt</span><strong class="text-lg">{{ pending_reviews }}</strong></a>
+</div>
+{% endwith %}
+
+<div class="mt-5 grid gap-4" data-charts data-query="range={{ range_key }}&from={{ date_from }}&to={{ date_to }}">
+  {# Hàng 3 #}
+  <div class="grid gap-4 xl:grid-cols-3">
+    <section class="card p-5 xl:col-span-2">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-bold">Doanh thu</h2>
+        <div class="inline-flex rounded-lg border border-border p-0.5 text-xs" role="tablist" data-trend-tabs>
+          <button type="button" data-period="7d" class="rounded-md px-3 py-1 font-semibold [&.is-active]:bg-primary [&.is-active]:text-white is-active">7 ngày</button>
+          <button type="button" data-period="30d" class="rounded-md px-3 py-1 font-semibold [&.is-active]:bg-primary [&.is-active]:text-white">30 ngày</button>
+          <button type="button" data-period="12m" class="rounded-md px-3 py-1 font-semibold [&.is-active]:bg-primary [&.is-active]:text-white">12 tháng</button>
+        </div>
+      </div>
+      <div class="relative h-72" data-chart-wrap="revenue-trend"><div class="skeleton absolute inset-0" data-skeleton></div><canvas data-chart="revenue-trend" aria-label="Biểu đồ doanh thu"></canvas></div>
+    </section>
+    <section class="card p-5">
+      <h2 class="mb-4 font-bold">Sản phẩm theo danh mục</h2>
+      <div class="relative h-72" data-chart-wrap="products-by-category">
+        <div class="skeleton absolute inset-0" data-skeleton></div>
+        <canvas data-chart="products-by-category" aria-label="Sản phẩm theo danh mục"></canvas>
+        <div class="pointer-events-none absolute inset-x-0 top-[38%] text-center" data-doughnut-center hidden><div class="text-2xl font-bold" data-center-value></div><div class="text-xs text-muted">sản phẩm</div></div>
+      </div>
+    </section>
+  </div>
+  {# Hàng 4 #}
+  <div class="grid gap-4 xl:grid-cols-2">
+    <section class="card p-5"><h2 class="mb-4 font-bold">Doanh thu theo danh mục <span class="text-xs font-normal text-muted">(kỳ đã chọn)</span></h2>
+      <div class="relative h-72" data-chart-wrap="revenue-by-category"><div class="skeleton absolute inset-0" data-skeleton></div><canvas data-chart="revenue-by-category"></canvas></div></section>
+    <section class="card p-5"><h2 class="mb-4 font-bold">Top 5 sản phẩm bán chạy <span class="text-xs font-normal text-muted">(kỳ đã chọn)</span></h2>
+      <div class="relative h-72" data-chart-wrap="top-products"><div class="skeleton absolute inset-0" data-skeleton></div><canvas data-chart="top-products"></canvas></div></section>
+  </div>
+  {# Hàng 5 #}
+  <section class="card p-5"><h2 class="mb-4 font-bold">Đơn hàng theo trạng thái <span class="text-xs font-normal text-muted">(kỳ đã chọn)</span></h2>
+    <div class="relative h-64" data-chart-wrap="orders-by-status"><div class="skeleton absolute inset-0" data-skeleton></div><canvas data-chart="orders-by-status"></canvas></div></section>
+</div>
+
+{# Hàng 6 – 2 bảng #}
+<div class="mt-5 grid gap-4 xl:grid-cols-2">
+  <section class="card overflow-hidden">
+    <div class="flex items-center justify-between border-b border-border px-5 py-3"><h2 class="font-bold">Đơn hàng mới nhất</h2><a href="{% url 'dashboard:order_list' %}" class="link text-sm">Xem tất cả</a></div>
+    <div class="overflow-x-auto"><table class="data-table">
+      <thead><tr><th>Mã đơn</th><th>Khách</th><th>Tổng tiền</th><th>Trạng thái</th><th>Thời gian</th><th></th></tr></thead>
+      <tbody>{% for o in recent_orders %}<tr>
+        <td><a href="{% url 'dashboard:order_detail' o.code %}" class="link">{{ o.code }}</a></td><td class="max-w-[140px] truncate">{{ o.recipient_name }}</td><td class="font-semibold">{{ o.total|vnd }}</td>
+        <td>{% status_badge o.status o.get_status_display %}</td><td class="whitespace-nowrap text-muted">{{ o.created_at|dt }}</td>
+        <td><a href="{% url 'dashboard:order_detail' o.code %}" class="btn-ghost btn-sm">Xem</a></td></tr>
+      {% empty %}<tr><td colspan="6">{% include 'dashboard/components/empty_state.html' with icon='shopping-bag' title='Chưa có đơn hàng' %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+  <section class="card overflow-hidden">
+    <div class="flex items-center justify-between border-b border-border px-5 py-3"><h2 class="font-bold">Sản phẩm sắp hết hàng</h2><a href="{% url 'dashboard:product_list' %}?stock=low" class="link text-sm">Xem tất cả</a></div>
+    <div class="overflow-x-auto"><table class="data-table">
+      <thead><tr><th>Sản phẩm</th><th>Tồn / Ngưỡng</th><th></th></tr></thead>
+      <tbody>{% for p in low_stock %}<tr>
+        <td><div class="flex items-center gap-2"><img src="{{ p.image_url }}" alt="" class="h-9 w-9 rounded-lg object-cover"><div class="min-w-0"><div class="max-w-xs truncate font-medium">{{ p.name }}</div><div class="text-xs text-muted">{{ p.sku }}</div></div></div></td>
+        <td><span class="badge-{{ p.stock_status|badge_color }}">{{ p.stock_quantity }}</span> / {{ p.low_stock_threshold }}</td>
+        <td class="text-right"><button type="button" class="btn-secondary btn-sm" data-quick-import="{{ p.pk }}" data-name="{{ p.name }}" data-cost="{{ p.cost_price }}">Nhập kho</button></td></tr>
+      {% empty %}<tr><td colspan="3">{% include 'dashboard/components/empty_state.html' with icon='package-check' title='Không có sản phẩm sắp hết' %}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </section>
+</div>
+
+<div id="quick-import-modal" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="qi-title">
+  <form method="post" action="{% url 'dashboard:inventory_import' %}" class="relative w-full max-w-md space-y-4 rounded-modal bg-white p-6">
+    {% csrf_token %}<input type="hidden" name="product" data-qi-product><input type="hidden" name="next" value="{% url 'dashboard:home' %}"><input type="hidden" name="update_cost_price" value="1">
+    <button type="button" data-modal-close class="icon-btn absolute right-3 top-3" aria-label="Đóng"><i data-lucide="x"></i></button>
+    <h2 id="qi-title" class="text-lg font-bold">Nhập kho nhanh</h2>
+    <p class="text-sm text-muted" data-qi-name></p>
+    <div class="grid grid-cols-2 gap-3">
+      <label class="form-label">Số lượng *<input type="number" name="quantity" min="1" required class="form-input mt-1"></label>
+      <label class="form-label">Giá nhập (₫)<input type="number" name="unit_cost" min="0" step="1000" class="form-input mt-1" data-qi-cost></label>
+    </div>
+    <label class="form-label block">Ghi chú / Nhà cung cấp<input name="note" maxlength="255" class="form-input mt-1"></label>
+    <div class="flex justify-end gap-2"><button type="button" data-modal-close class="btn-secondary">Hủy</button><button type="submit" class="btn-primary">Nhập kho</button></div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script type="module" src="{% static 'js/dashboard/charts.js' %}?v=2"></script>
+{% endblock %}

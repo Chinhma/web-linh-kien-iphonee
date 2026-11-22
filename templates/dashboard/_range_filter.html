@@ -1,0 +1,14 @@
+<form method="get" class="no-print card mb-5 flex flex-wrap items-end gap-3 p-4" data-range-form>
+  {% for key, values in request.GET.lists %}{% if key not in 'range,from,to,page' %}{% for v in values %}<input type="hidden" name="{{ key }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+  <div class="flex flex-wrap gap-1.5">
+    {% for key, label in range_labels.items %}
+      {% if key != 'custom' %}<button type="submit" name="range" value="{{ key }}" class="chip {% if range_key == key %}is-active{% endif %}">{{ label }}</button>{% endif %}
+    {% endfor %}
+  </div>
+  <div class="flex flex-wrap items-end gap-2">
+    <label class="text-xs text-muted">Từ ngày<input type="date" name="from" value="{{ date_from }}" class="form-input mt-1 py-1.5"></label>
+    <label class="text-xs text-muted">Đến ngày<input type="date" name="to" value="{{ date_to }}" class="form-input mt-1 py-1.5"></label>
+    <button type="submit" name="range" value="custom" class="btn-secondary btn-sm h-9">Áp dụng</button>
+  </div>
+  <button type="button" onclick="window.print()" class="btn-ghost btn-sm ml-auto h-9"><i data-lucide="printer" class="h-4 w-4"></i>In báo cáo</button>
+</form>

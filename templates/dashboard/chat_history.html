@@ -1,0 +1,29 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  <input name="q" value="{{ q }}" placeholder="Nội dung tin nhắn hoặc email" class="form-input w-64 py-2" aria-label="Tìm">
+  <select name="who" class="form-input w-auto py-2" aria-label="Người dùng"><option value="">Tất cả người dùng</option><option value="customer" {% if request.GET.who == 'customer' %}selected{% endif %}>Khách hàng</option><option value="guest" {% if request.GET.who == 'guest' %}selected{% endif %}>Khách vãng lai</option></select>
+  <label class="flex items-center gap-1.5"><input type="checkbox" name="error" value="1" class="form-check" {% if request.GET.error == '1' %}checked{% endif %}>Có lỗi</label>
+  <label class="text-xs text-muted">Từ<input type="date" name="from" value="{{ request.GET.from }}" class="form-input mt-1 py-1.5"></label>
+  <label class="text-xs text-muted">Đến<input type="date" name="to" value="{{ request.GET.to }}" class="form-input mt-1 py-1.5"></label>
+  <button class="btn-secondary">Lọc</button>
+  <span class="ml-auto text-muted">{{ total }} hội thoại</span>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Người dùng</th><th>Tin nhắn đầu</th><th>{% include 'dashboard/_sort.html' with key='count' label='Số tin' %}</th><th>{% include 'dashboard/_sort.html' with key='time' label='Thời gian' %}</th><th>Lỗi</th><th></th></tr></thead>
+    <tbody>
+      {% for c in page_obj %}
+        <tr>
+          <td class="text-muted">{{ c.pk }}</td>
+          <td>{% if c.user %}{{ c.user.display_name }}<div class="text-xs text-muted">{{ c.user.email }}</div>{% else %}<span class="badge-muted">Khách vãng lai</span>{% endif %}</td>
+          <td class="max-w-sm truncate">{{ c.title }}</td><td>{{ c.message_count }}</td><td class="whitespace-nowrap text-muted">{{ c.last_message_at|dt }}</td>
+          <td>{% if c.has_error %}<span class="badge-danger">Có</span>{% endif %}</td>
+          <td><a href="{% url 'dashboard:chat_detail' c.pk %}" class="btn-ghost btn-sm"><i data-lucide="eye" class="h-4 w-4"></i></a></td>
+        </tr>
+      {% empty %}<tr><td colspan="7" class="py-12 text-center text-muted">Chưa có hội thoại.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}

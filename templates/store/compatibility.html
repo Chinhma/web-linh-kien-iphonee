@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Tra cứu linh kiện tương thích{% endblock %}
+
+{% block content %}
+<div class="container-x py-6" data-compat-app data-api="{{ api_url }}" data-hotline="{{ store.hotline }}" data-hotline-display="{{ store.hotline_display }}">
+  {% include 'includes/components/breadcrumb.html' %}
+  <div class="mb-6">
+    <h1 class="text-2xl md:text-3xl">Tra cứu linh kiện tương thích</h1>
+    <p class="mt-2 text-muted">Chọn dòng iPhone và loại linh kiện – hệ thống chỉ hiển thị linh kiện <strong>đã được xác nhận tương thích</strong>.</p>
+    {% if store.show_sample_data_notice %}<p class="mt-2 text-xs text-muted"><i data-lucide="info" class="mr-1 inline h-3.5 w-3.5"></i>Dữ liệu tương thích đang ở chế độ minh họa cho mục đích demo.</p>{% endif %}
+  </div>
+
+  <div class="card p-5 md:p-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="flex items-center gap-2 text-lg font-semibold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm text-white">1</span>Chọn dòng iPhone</h2>
+      <div class="relative w-full sm:w-64">
+        <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
+        <input type="search" data-model-search placeholder="Tìm nhanh, ví dụ 13 Pro" class="form-input pl-9" aria-label="Tìm dòng iPhone">
+      </div>
+    </div>
+    <select data-model-select class="form-input mt-4 md:hidden" aria-label="Dòng iPhone">
+      <option value="">— Chọn dòng iPhone —</option>
+      {% for group in iphone_groups %}<optgroup label="{{ group.label }}">{% for m in group.models %}<option value="{{ m.slug }}">{{ m.name }}</option>{% endfor %}</optgroup>{% endfor %}
+    </select>
+    <div class="mt-4 hidden space-y-4 md:block">
+      {% for group in iphone_groups %}
+        <div data-model-group>
+          <div class="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{{ group.label }}</div>
+          <div class="flex flex-wrap gap-2">
+            {% for m in group.models %}
+              <button type="button" class="chip" data-model="{{ m.slug }}" data-name="{{ m.name }}"><i data-lucide="smartphone" class="h-4 w-4"></i>{{ m.name }}</button>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <h2 class="mt-8 flex items-center gap-2 text-lg font-semibold"><span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-sm text-white">2</span>Chọn loại linh kiện</h2>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button type="button" class="chip is-active" data-category="">Tất cả linh kiện</button>
+      {% for cat in categories %}
+        <button type="button" class="chip" data-category="{{ cat.slug }}"><i data-lucide="{{ cat.icon }}" class="h-4 w-4"></i>{{ cat.name }}</button>
+        {% for child in cat.children.all %}<button type="button" class="chip text-muted" data-category="{{ child.slug }}">{{ child.name }}</button>{% endfor %}
+      {% endfor %}
+    </div>
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <button type="button" class="btn-primary btn-lg" data-compat-submit><i data-lucide="search" class="h-5 w-5"></i>Tra cứu</button>
+      <span class="text-sm text-muted" data-selection-label></span>
+    </div>
+  </div>
+
+  <section class="mt-8" data-compat-results aria-live="polite">
+    <div class="card flex flex-col items-center px-6 py-14 text-center">
+      <span class="flex h-16 w-16 items-center justify-center rounded-full bg-primary-light text-primary"><i data-lucide="smartphone" class="h-8 w-8"></i></span>
+      <h3 class="mt-4 text-lg font-semibold">Chọn dòng iPhone và loại linh kiện để bắt đầu</h3>
+      <p class="mt-1 text-sm text-muted">Kết quả chỉ gồm các linh kiện đã được iParts Store xác nhận tương thích.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}<script type="module" src="{% static 'js/store/compatibility.js' %}"></script>{% endblock %}

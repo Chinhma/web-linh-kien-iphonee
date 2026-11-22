@@ -1,0 +1,25 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<a href="{% url 'dashboard:coupon_list' %}" class="mb-4 inline-flex text-muted hover:text-primary">← Mã giảm giá</a>
+<div class="grid gap-4 lg:grid-cols-3">
+  <section class="card p-5">
+    <div class="text-2xl font-bold">{{ coupon.code }}</div>
+    <p class="text-muted">{{ coupon.description }}</p>
+    <dl class="mt-4 space-y-1.5">
+      <div class="flex justify-between"><dt class="text-muted">Ưu đãi</dt><dd>{{ coupon.value_label }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Đơn tối thiểu</dt><dd>{{ coupon.min_order_value|vnd }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Đã dùng</dt><dd>{{ coupon.used_count }}/{{ coupon.usage_limit|default:'∞' }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Mỗi khách</dt><dd>{{ coupon.usage_limit_per_user }} lượt</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Thời gian</dt><dd>{{ coupon.start_at|d }} – {{ coupon.end_at|d }}</dd></div>
+      <div class="flex justify-between"><dt class="text-muted">Trạng thái</dt><dd>{% status_badge coupon.state coupon.state_label %}</dd></div>
+    </dl>
+    <a href="{% url 'dashboard:coupon_edit' coupon.pk %}" class="btn-secondary btn-sm mt-4">Sửa mã</a>
+  </section>
+  <section class="card overflow-x-auto lg:col-span-2">
+    <h3 class="px-5 pt-5 font-bold">Lịch sử sử dụng</h3>
+    <table class="data-table mt-2"><thead><tr><th>Khách hàng</th><th>Đơn hàng</th><th>Số tiền giảm</th><th>Thời gian</th></tr></thead>
+      <tbody>{% for u in usages %}<tr><td>{{ u.user.email }}</td><td><a href="{% url 'dashboard:order_detail' u.order.code %}" class="link">{{ u.order.code }}</a></td><td>{{ u.discount_amount|vnd }}</td><td class="text-muted">{{ u.created_at|dt }}</td></tr>{% empty %}<tr><td colspan="4" class="py-8 text-center text-muted">Chưa có lượt sử dụng.</td></tr>{% endfor %}</tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}

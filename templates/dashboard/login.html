@@ -1,0 +1,31 @@
+{% load static %}<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng nhập | iParts Store Admin</title><link rel="icon" href="{% static 'images/brand/favicon.svg' %}?v=2">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/tailwind.css' %}?v=3"></head>
+<body class="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-primary-dark p-4">
+  <div class="w-full max-w-md rounded-modal bg-white p-8 shadow-card-hover">
+    <div class="mb-6 flex justify-center rounded-xl bg-footer-bg p-4"><img src="{% static 'images/brand/logo-admin.svg' %}?v=2" alt="iParts Store Admin" class="h-10"></div>
+    <h1 class="text-center text-2xl">Đăng nhập quản trị</h1>
+    {% if form.non_field_errors %}<div class="mt-4 rounded-xl bg-red-50 p-3 text-sm text-danger" role="alert">{{ form.non_field_errors|join:' ' }}</div>{% endif %}
+    <form method="post" class="mt-6 space-y-4" novalidate>
+      {% csrf_token %}
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      {% include 'includes/components/field.html' with field=form.identifier %}
+      {% include 'includes/components/field.html' with field=form.password password=True %}
+      {% include 'includes/components/field.html' with field=form.remember %}
+      <button type="submit" class="btn-primary btn-lg w-full">Đăng nhập</button>
+    </form>
+    <p class="mt-6 text-center text-xs text-muted"><a href="/" class="hover:text-primary">← Về cửa hàng</a></p>
+  </div>
+  {{ django_messages|json_script:'django-messages' }}
+  <script src="{% static 'vendor/lucide.min.js' %}"></script>
+  <script type="module">
+    import { toast } from '{% static "js/core/toast.js" %}';
+    window.lucide && window.lucide.createIcons();
+    JSON.parse(document.getElementById('django-messages').textContent || '[]').forEach((m) => toast(m.message, m.level));
+    document.querySelectorAll('[data-toggle-password]').forEach((b) => b.addEventListener('click', () => {
+      const i = document.getElementById(b.dataset.togglePassword); i.type = i.type === 'password' ? 'text' : 'password';
+    }));
+  </script>
+</body></html>

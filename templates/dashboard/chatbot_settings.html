@@ -1,0 +1,89 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}
+  <a href="{% url 'dashboard:chatbot_stats' %}" class="btn-ghost"><i data-lucide="bar-chart-3" class="h-4 w-4"></i>Thống kê</a>
+  <a href="{% url 'dashboard:chat_history' %}" class="btn-ghost"><i data-lucide="messages-square" class="h-4 w-4"></i>Lịch sử hội thoại</a>
+{% endblock %}
+{% block content %}
+<div class="mb-5 grid gap-4 sm:grid-cols-3">
+  {% include 'dashboard/components/stat_card.html' with icon='message-circle' label='Hội thoại hôm nay' value=summary.today %}
+  {% include 'dashboard/components/stat_card.html' with icon='calendar-days' color='bg-green-100 text-success' label='Hội thoại 7 ngày qua' value=summary.week %}
+  {% url 'dashboard:chatbot_unanswered' as unanswered_url %}
+  {% include 'dashboard/components/stat_card.html' with icon='help-circle' color='bg-amber-100 text-warning' label='Câu hỏi chưa trả lời được' value=summary.unanswered url=unanswered_url %}
+</div>
+
+<div class="grid gap-5 xl:grid-cols-[1fr_380px]">
+  <form method="post" class="space-y-5 pb-20" novalidate data-dirty-check>
+    {% csrf_token %}
+    {% if form.errors %}<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-danger" role="alert">Vui lòng kiểm tra lại các trường bị lỗi.</div>{% endif %}
+    <section class="card p-5">
+      <div class="flex items-center justify-between gap-3">
+        <div><h2 class="font-bold">Bật chatbot trên website</h2><p class="text-sm text-muted">Tắt để ẩn nút chat trên trang khách hàng.</p></div>
+        <label class="relative inline-flex cursor-pointer items-center">
+          <input type="checkbox" name="is_enabled" class="peer sr-only" {% if form.is_enabled.value %}checked{% endif %} aria-label="Bật chatbot">
+          <span class="h-6 w-11 rounded-full bg-slate-200 transition peer-checked:bg-success"></span>
+          <span class="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card space-y-4 p-5">
+      <h2 class="font-bold">Lời chào</h2>
+      {% include 'includes/components/field.html' with field=form.greeting_message %}
+    </section>
+
+    <section class="card p-5">
+      <div class="mb-3 flex items-center justify-between gap-2">
+        <div><h2 class="font-bold">Câu hỏi gợi ý</h2><p class="text-sm text-muted">Hiển thị dạng nút bấm khi khách mở chat. Kéo ⋮⋮ để sắp xếp.</p></div>
+        <button type="button" class="btn-secondary btn-sm" data-sugg-add><i data-lucide="plus" class="h-4 w-4"></i>Thêm câu</button>
+      </div>
+      <ul class="space-y-2" data-sugg-list></ul>
+      <textarea name="suggested_questions_text" hidden data-sugg-store>{{ form.suggested_questions_text.value|default:'' }}</textarea>
+      {% for e in form.suggested_questions_text.errors %}<p class="form-error">{{ e }}</p>{% endfor %}
+    </section>
+
+    <section class="card space-y-4 p-5">
+      <h2 class="font-bold">Thông tin bổ sung cho AI</h2>
+      {% include 'includes/components/field.html' with field=form.extra_store_info %}
+      <p class="text-xs text-muted">Ví dụ: chính sách bảo hành, giờ mở cửa, khuyến mãi đang chạy… AI sẽ dùng thông tin này khi trả lời.</p>
+    </section>
+
+    <section class="card p-5">
+      <h2 class="mb-3 font-bold">Giới hạn tin nhắn</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        {% include 'includes/components/field.html' with field=form.max_messages_per_hour_guest %}
+        {% include 'includes/components/field.html' with field=form.max_messages_per_hour_customer %}
+      </div>
+    </section>
+
+    <div class="fixed bottom-0 left-0 right-0 z-30 border-t border-border bg-white/95 backdrop-blur lg:left-[260px]">
+      <div class="flex justify-end gap-2 px-4 py-3 lg:px-6"><button class="btn-primary"><i data-lucide="save" class="h-4 w-4"></i>Lưu cấu hình</button></div>
+    </div>
+  </form>
+
+  <aside class="space-y-5">
+    <section class="card p-5">
+      <h2 class="mb-3 font-bold">Kết nối Gemini</h2>
+      {% if gemini_configured %}
+        <p class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-success"></span><strong>Đã kết nối</strong></p>
+        <p class="mt-1 text-sm text-muted">Model: {{ gemini_model }}</p>
+      {% else %}
+        <p class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-warning"></span><strong>Chưa cấu hình API key</strong></p>
+        <p class="mt-1 text-sm text-muted">Chatbot đang chạy <strong>chế độ cơ bản</strong> (vẫn tra cứu dữ liệu thật). Thêm <code>GEMINI_API_KEY</code> vào file <code>.env</code> rồi khởi động lại server.</p>
+      {% endif %}
+      <button type="button" class="btn-secondary btn-sm mt-3" data-test-url="{% url 'dashboard:chatbot_test' %}"><i data-lucide="plug-zap" class="h-4 w-4"></i>Kiểm tra kết nối</button>
+      <p class="mt-2 text-xs text-muted" data-test-result></p>
+    </section>
+    <section class="card p-5 text-sm text-muted">
+      <h2 class="mb-2 font-bold text-text">Lưu ý</h2>
+      <ul class="list-disc space-y-1 pl-5">
+        <li>API key chỉ cấu hình trong file <code>.env</code>, không lưu trong cơ sở dữ liệu.</li>
+        <li>AI chỉ trả lời dựa trên sản phẩm & dữ liệu tương thích có thật trong hệ thống.</li>
+      </ul>
+    </section>
+  </aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="{% static 'js/dashboard/chatbot.js' %}?v=2"></script>
+{% endblock %}

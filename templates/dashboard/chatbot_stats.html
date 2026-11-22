@@ -1,0 +1,21 @@
+{% extends 'base_admin.html' %}
+{% load static %}
+{% block page_actions %}<a href="{% url 'dashboard:chat_history' %}" class="btn-secondary">Lịch sử hội thoại</a>{% endblock %}
+{% block content %}
+<div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {% include 'dashboard/components/stat_card.html' with icon='messages-square' label='Tổng hội thoại' value=stats.conversations %}
+  {% include 'dashboard/components/stat_card.html' with icon='message-circle' color='bg-green-100 text-success' label='Tin nhắn hôm nay' value=stats.today %}
+  {% include 'dashboard/components/stat_card.html' with icon='timer' color='bg-violet-100 text-violet-600' label='Thời gian phản hồi TB' value=stats.avg_latency|stringformat:'s'|add:' ms' %}
+  {% include 'dashboard/components/stat_card.html' with icon='alert-triangle' color='bg-red-100 text-danger' label='Tỉ lệ lỗi' value=stats.error_rate|stringformat:'s'|add:'%' %}
+</div>
+<section class="card mb-4 p-5"><h2 class="mb-3 font-bold">Số tin nhắn theo ngày (30 ngày)</h2><div class="relative h-64"><canvas data-chart="daily" data-type="line"></canvas></div></section>
+<div class="grid gap-4 lg:grid-cols-2">
+  <section class="card p-5"><h2 class="mb-3 font-bold">Top dòng iPhone được hỏi</h2><div class="relative h-64"><canvas data-chart="models" data-type="bar"></canvas></div></section>
+  <section class="card p-5"><h2 class="mb-3 font-bold">Top loại linh kiện được hỏi</h2><div class="relative h-64"><canvas data-chart="categories" data-type="bar"></canvas></div></section>
+</div>
+{{ charts|json_script:'chart-data' }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script type="module" src="{% static 'js/dashboard/simple-charts.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<form method="post" class="grid gap-5 xl:grid-cols-[400px_1fr]">
+  {% csrf_token %}
+  <section class="card space-y-4 p-5">
+    {% if form.non_field_errors %}<div class="rounded-xl bg-red-50 p-3 text-danger">{{ form.non_field_errors|join:' ' }}</div>{% endif %}
+    {% include 'includes/components/field.html' with field=form.category %}
+    {% include 'includes/components/field.html' with field=form.products %}
+    {% include 'includes/components/field.html' with field=form.percent %}
+    <div class="grid gap-3 sm:grid-cols-2">
+      {% include 'includes/components/field.html' with field=form.sale_start %}
+      {% include 'includes/components/field.html' with field=form.sale_end %}
+    </div>
+    <p class="form-hint">Để trống thời gian = áp dụng ngay và không giới hạn. Đang có {{ on_sale }} sản phẩm có giá khuyến mãi.</p>
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" name="action" value="preview" class="btn-secondary"><i data-lucide="eye" class="h-4 w-4"></i>Xem trước</button>
+      {% if preview %}<button type="submit" name="action" value="apply" class="btn-primary"><i data-lucide="check" class="h-4 w-4"></i>Áp dụng cho {{ preview|length }} sản phẩm</button>{% endif %}
+      <button type="submit" name="action" value="remove" class="btn-ghost text-danger" formnovalidate>Gỡ giảm giá của lựa chọn</button>
+    </div>
+  </section>
+  <section class="card overflow-x-auto">
+    <h2 class="px-5 pt-5 font-bold">Xem trước giá mới</h2>
+    {% if preview %}
+      <table class="data-table mt-2">
+        <thead><tr><th>Sản phẩm</th><th>Danh mục</th><th>Giá bán</th><th>Giá KM hiện tại</th><th>Giá mới</th></tr></thead>
+        <tbody>{% for row in preview %}<tr><td class="max-w-xs truncate">{{ row.p.name }}<div class="text-xs text-muted">{{ row.p.sku }}</div></td><td class="text-muted">{{ row.p.category.name }}</td><td>{{ row.p.price|vnd }}</td><td class="text-muted">{{ row.p.sale_price|default_if_none:''|vnd|default:'—' }}</td><td class="font-bold text-danger">{{ row.new|vnd }}</td></tr>{% endfor %}</tbody>
+      </table>
+    {% else %}
+      {% include 'dashboard/components/empty_state.html' with icon='percent' title='Chọn danh mục/sản phẩm và nhập % giảm rồi bấm Xem trước' %}
+    {% endif %}
+  </section>
+</form>
+{% endblock %}

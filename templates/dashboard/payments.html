@@ -1,0 +1,36 @@
+{% extends 'base_admin.html' %}
+{% block content %}
+<div class="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+  {% for code, label in methods %}
+    <div class="card p-5"><div class="text-xs text-muted">Thanh toán thành công – {{ label }}</div><div class="mt-1 text-xl font-bold">{{ totals|get_item:code|default:0|vnd }}</div></div>
+  {% endfor %}
+  <a href="?status=failed" class="card p-5 hover:border-danger"><div class="text-xs text-muted">Giao dịch thất bại</div><div class="mt-1 text-xl font-bold text-danger">{{ failed_count }}</div></a>
+  <a href="{% url 'dashboard:payment_refunds' %}" class="card p-5 hover:border-warning"><div class="text-xs text-muted">Đơn chờ hoàn tiền</div><div class="mt-1 text-xl font-bold text-warning">{{ refund_pending }}</div></a>
+</div>
+<form method="get" class="card mb-4 flex flex-wrap items-end gap-2 p-4">
+  <input name="q" value="{{ q }}" placeholder="Mã giao dịch, mã đơn, email" class="form-input w-64 py-2" aria-label="Tìm">
+  <select name="method" class="form-input w-auto py-2" aria-label="Phương thức"><option value="">Phương thức</option>{% for v, l in methods %}<option value="{{ v }}" {% if request.GET.method == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <select name="status" class="form-input w-auto py-2" aria-label="Trạng thái"><option value="">Trạng thái</option>{% for v, l in statuses %}<option value="{{ v }}" {% if request.GET.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+  <label class="text-xs text-muted">Từ<input type="date" name="from" value="{{ request.GET.from }}" class="form-input mt-1 py-1.5"></label>
+  <label class="text-xs text-muted">Đến<input type="date" name="to" value="{{ request.GET.to }}" class="form-input mt-1 py-1.5"></label>
+  <button class="btn-secondary">Lọc</button>
+  <span class="ml-auto text-muted">{{ total }} giao dịch · chỉ xem</span>
+</form>
+<div class="card overflow-x-auto">
+  <table class="data-table">
+    <thead><tr><th>Mã nội bộ</th><th>Mã cổng</th><th>Đơn hàng</th><th>Khách hàng</th><th>Phương thức</th><th>{% include 'dashboard/_sort.html' with key='amount' label='Số tiền' %}</th><th>Trạng thái</th><th>Mã phản hồi</th><th>{% include 'dashboard/_sort.html' with key='time' label='Thời gian' %}</th></tr></thead>
+    <tbody>
+      {% for p in page_obj %}
+        <tr>
+          <td><a href="{% url 'dashboard:payment_detail' p.pk %}" class="link">{{ p.transaction_ref }}</a></td>
+          <td class="text-muted">{{ p.gateway_transaction_id|default:'—' }}</td>
+          <td><a href="{% url 'dashboard:order_detail' p.order.code %}" class="link">{{ p.order.code }}</a></td>
+          <td>{{ p.order.user.email }}</td><td class="uppercase">{{ p.method }}</td><td class="font-semibold">{{ p.amount|vnd }}</td>
+          <td>{% status_badge p.status p.get_status_display %}</td><td>{{ p.gateway_response_code|default:'—' }}</td><td class="whitespace-nowrap text-muted">{{ p.created_at|dt }}</td>
+        </tr>
+      {% empty %}<tr><td colspan="9" class="py-12 text-center text-muted">Chưa có giao dịch.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include 'dashboard/components/pagination.html' %}
+{% endblock %}
