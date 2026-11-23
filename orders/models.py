@@ -132,6 +132,15 @@ class OrderItem(models.Model):
     product = models.ForeignKey('products.Product', null=True, on_delete=models.PROTECT, related_name='order_items')
     product_name = models.CharField('Tên sản phẩm', max_length=200)
     product_sku = models.CharField('SKU', max_length=50)
+    option = models.ForeignKey('products.ProductOption', verbose_name='Loại (cũ)', null=True, blank=True,
+                               on_delete=models.SET_NULL, related_name='order_items')
+    variant = models.ForeignKey('products.ProductVariant', verbose_name='Biến thể', null=True, blank=True,
+                                on_delete=models.SET_NULL, related_name='order_items')
+    option_name = models.CharField('Phân loại', max_length=100, blank=True)
+    color_name = models.CharField('Màu sắc', max_length=60, blank=True)
+    warranty_name = models.CharField('Gói bảo hành', max_length=80, blank=True)
+    warranty_months = models.PositiveSmallIntegerField('Bảo hành (tháng)', null=True, blank=True)
+    warranty_price = models.PositiveIntegerField('Phí bảo hành', default=0)
     product_image = models.CharField('Ảnh', max_length=255, blank=True)
     unit_price = models.PositiveIntegerField('Đơn giá')
     quantity = models.PositiveIntegerField('Số lượng')
@@ -143,7 +152,17 @@ class OrderItem(models.Model):
         ordering = ['id']
 
     def __str__(self):
-        return f'{self.product_name} × {self.quantity}'
+        return f'{self.display_name} × {self.quantity}'
+
+    @property
+    def variant_label(self) -> str:
+        """"Zin bóc máy – Đen – BH 12 tháng" (bản chụp lúc mua)."""
+        warranty = f'BH {self.warranty_months} tháng' if self.warranty_months else ''
+        return ' – '.join(p for p in (self.option_name, self.color_name, warranty) if p)
+
+    @property
+    def display_name(self) -> str:
+        return f'{self.product_name} – {self.variant_label}' if self.variant_label else self.product_name
 
 
 class OrderStatusHistory(models.Model):

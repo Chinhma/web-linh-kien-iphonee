@@ -1,0 +1,17 @@
+{# Thanh mua hàng dính ở đáy (giống ClickBuy) – cập nhật theo tổ hợp mỗi lần đổi lựa chọn. #}
+{% if not is_admin_user %}
+  <div class="container-x flex items-center gap-3 py-2.5">
+    <img src="{{ sel.image }}" alt="" class="hidden h-12 w-12 shrink-0 rounded-lg object-cover sm:block">
+    <div class="min-w-0 flex-1">
+      <div class="truncate text-sm font-semibold">{{ product.name }}</div>
+      <div class="truncate text-xs text-muted">{{ sel.summary }}</div>
+      <div class="text-base font-bold text-danger">{{ sel.price|vnd }}</div>
+    </div>
+    {% if can_buy %}
+      <button type="button" class="btn-secondary hidden sm:inline-flex" data-add-to-cart="{{ product.pk }}" data-variant-id="{{ sel.variant_id|default:'' }}" data-product-name="{{ product.name }}" data-qty-input="#detail-qty"><i data-lucide="shopping-cart" class="h-4 w-4"></i>THÊM VÀO GIỎ</button>
+      <button type="button" class="btn-primary px-6" data-add-to-cart="{{ product.pk }}" data-variant-id="{{ sel.variant_id|default:'' }}" data-buy-now data-product-name="{{ product.name }}" data-qty-input="#detail-qty">MUA NGAY</button>
+    {% else %}
+      <button type="button" disabled class="btn bg-slate-100 text-muted">Hết hàng</button>
+    {% endif %}
+  </div>
+{% endif %}

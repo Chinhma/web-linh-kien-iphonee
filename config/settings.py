@@ -182,7 +182,7 @@ if not GOOGLE_OAUTH_CONFIGURED:
 
 # ---- Gemini ----
 GEMINI_API_KEY = env('GEMINI_API_KEY')
-GEMINI_MODEL = env('GEMINI_MODEL', 'gemini-2.5-flash')
+GEMINI_MODEL = env('GEMINI_MODEL', 'gemini-3.8-flash')
 GEMINI_TIMEOUT_SECONDS = int(env('GEMINI_TIMEOUT_SECONDS', '20') or 20)
 
 # ---- Thanh toán ----

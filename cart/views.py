@@ -60,7 +60,8 @@ def api_add(request):
     if not product_id:
         return api_error('INVALID', 'Sản phẩm không hợp lệ.')
     try:
-        item, message = services.add_to_cart(request.user, product_id, quantity, select_only=bool(data.get('buy_now')))
+        item, message = services.add_to_cart(request.user, product_id, quantity, select_only=bool(data.get('buy_now')),
+                                             variant_id=to_int(data.get('variant_id')))
     except CartError as exc:
         return api_error(exc.code, exc.message, status=409 if exc.code == 'OUT_OF_STOCK' else 400)
     return api_ok({**_counts(request.user), 'item_id': item.pk, 'quantity': item.quantity,
@@ -162,5 +163,5 @@ def api_wishlist_add_all(request):
             added += 1
         except CartError:
             skipped += 1
-    message = f'Đã thêm {added} sản phẩm vào giỏ hàng.' + (f' {skipped} sản phẩm không còn hàng.' if skipped else '')
+    message = f'Đã thêm {added} sản phẩm vào giỏ hàng.' + (f' {skipped} sản phẩm hết hàng hoặc cần chọn loại màn / màu trên trang sản phẩm.' if skipped else '')
     return api_ok(_counts(request.user), message)

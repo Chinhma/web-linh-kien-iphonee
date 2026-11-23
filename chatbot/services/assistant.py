@@ -13,7 +13,7 @@ from products.models import Product
 from products.selectors import with_card_data
 from products.services import resolve_category, resolve_iphone_model
 
-from . import fallback, gemini_client
+from . import fallback, gemini_client, guard, tools
 
 logger = logging.getLogger('iparts')
 HISTORY_LIMIT = 10
@@ -90,13 +90,61 @@ def _notes_from_results(tool_results) -> dict:
     return notes
 
 
-def _suggestions(intent: str, meta: dict) -> list[str]:
-    model = meta.get('iphone_model')
+def _context_model(history: list[dict], message: str):
+    """Dòng máy của câu hiện tại, nếu không có thì lấy từ các tin nhắn trước của khách (nhớ ngữ cảnh)."""
+    resolved = resolve_iphone_model(tools.normalize_query(message))
+    if resolved['model'] and not resolved['ambiguous']:
+        return resolved['model'].name, resolved
+    for m in reversed(history[:-1]):
+        if m['role'] == 'user':
+            prev = resolve_iphone_model(tools.normalize_query(m['content']))
+            if prev['model'] and not prev['ambiguous']:
+                return prev['model'].name, resolved
+    return (resolved['model'].name if resolved['model'] else ''), resolved
+
+
+def _suggestions(result: dict, meta: dict, resolved: dict | None = None) -> list[str]:
+    """Gợi ý câu hỏi tiếp theo theo đúng ngữ cảnh câu trả lời (không cố định)."""
+    model = meta.get('iphone_model', '')
+    category = meta.get('category', '')
+    tool_results = result.get('tool_results') or []
+    out: list[str] = []
+    # Dòng máy mơ hồ -> gợi ý luôn từng phiên bản để khách bấm chọn
+    candidates = []
+    for item in tool_results:
+        res = item.get('result') if isinstance(item.get('result'), dict) else {}
+        info = res.get('iphone_model')
+        if isinstance(info, dict) and info.get('ambiguous'):
+            candidates = info.get('candidates', [])
+    if not candidates and resolved and resolved.get('ambiguous') and not result.get('product_ids'):
+        candidates = [m.name for m in resolved['candidates']]
+    if candidates:
+        label = category or 'Linh kiện'
+        return [f'{label} {name}' for name in candidates[:4]]
+    products = []
+    for item in tool_results:
+        res = item.get('result') if isinstance(item.get('result'), dict) else {}
+        products.extend(p for p in res.get('products', []) if isinstance(p, dict))
+    if len(products) >= 2:
+        out.append(f'So sánh {products[0]["name"]} và {products[1]["name"]}')
+    if products:
+        out.append(f'{products[0]["name"]} bảo hành bao lâu?')
+    if meta.get('no_result'):
+        if model:
+            out.append(f'{model} có những linh kiện nào?')
+        out.append('Sản phẩm nào đang được giảm giá?')
     if model:
-        return [f'Pin {model} giá bao nhiêu?', f'Màn hình {model} còn hàng không?', 'Chính sách bảo hành thế nào?']
-    if intent == 'promotions':
-        return ['Màn hình nào tương thích với iPhone 13 Pro?', 'Phí vận chuyển bao nhiêu?']
-    return ['Màn hình nào tương thích với iPhone 13 Pro?', 'Sản phẩm nào đang được giảm giá?', 'Tôi cần thay pin iPhone 11']
+        for cat in ('Pin', 'Màn hình', 'Chân sạc', 'Camera sau'):
+            if cat.lower() != category.lower() and len(out) < 3:
+                out.append(f'{cat} {model} giá bao nhiêu?')
+    intent = result.get('intent', '')
+    if intent == 'store_policy':
+        out += ['Phí vận chuyển bao nhiêu?', 'Chính sách đổi trả thế nào?']
+    if category and not model:
+        out.insert(0, f'{category} cho iPhone 13 Pro')
+    unique = list(dict.fromkeys(x for x in out if x))
+    return unique[:3] or ['Màn hình nào tương thích với iPhone 13 Pro?', 'Sản phẩm nào đang được giảm giá?',
+                          'Pin iPhone 11 giá bao nhiêu?']
 
 
 def handle_message(request, message: str, conversation_id=None) -> dict:
@@ -110,22 +158,36 @@ def handle_message(request, message: str, conversation_id=None) -> dict:
                for m in conversation.messages.filter(is_error=False).order_by('-created_at', '-id')[:HISTORY_LIMIT]][::-1]
     mode = 'ai'
     is_error = False
+    context_model, resolved = _context_model(history, message)
+    category = resolve_category(tools.normalize_query(message))
     try:
-        if not gemini_client.is_configured():
-            raise gemini_client.GeminiUnavailable('not_configured')
-        result = gemini_client.generate_reply(build_system_prompt(), history, user=user)
-        resolved = resolve_iphone_model(message)
-        category = resolve_category(message)
-        intent = result['tool_calls'][0]['name'] if result['tool_calls'] else 'general'
-        intent = {'check_compatibility': 'compatibility_lookup', 'search_products': 'product_search'}.get(intent, intent)
-        result.update({
-            'intent': intent,
-            'meta': {'iphone_model': resolved['model'].name if resolved['model'] else '',
-                     'category': category.name if category else '',
-                     'no_result': bool(result['tool_calls']) and not result['product_ids']},
-            'needs_login': any(r['result'].get('error') == 'LOGIN_REQUIRED' for r in result['tool_results']
-                               if isinstance(r.get('result'), dict)),
-        })
+        if guard.is_injection(message):
+            # Chặn ngay, không gửi cho Gemini
+            result = {'reply': fallback.REFUSE_REPLY, 'intent': 'refuse', 'tool_calls': [], 'tool_results': [],
+                      'product_ids': [], 'meta': {}}
+        else:
+            if not gemini_client.is_configured():
+                raise gemini_client.GeminiUnavailable('not_configured')
+            try:
+                result = gemini_client.generate_reply(build_system_prompt(), history, user=user,
+                                                      force_tools=guard.needs_store_data(message))
+            except gemini_client.PriceMismatch as exc:
+                # AI vẫn viết sai giá -> trả lời bằng dữ liệu tool, không dùng chữ của AI
+                result = fallback.from_tool_results(exc.state['tool_results'], message, user=user)
+            tool_results = result.get('tool_results') or []
+            intent = result['tool_calls'][0]['name'] if result.get('tool_calls') else result.get('intent', 'general')
+            intent = {'check_compatibility': 'compatibility_lookup', 'search_products': 'product_search',
+                      'get_store_policy': 'store_policy', 'get_promotions': 'promotions'}.get(intent, intent)
+            # Không có kết quả = đã tra dữ liệu nhưng mọi tool đều báo found=false (ghi vào "câu chưa trả lời được")
+            no_result = bool(tool_results) and not any(
+                isinstance(r.get('result'), dict) and r['result'].get('found', True) for r in tool_results)
+            result.update({
+                'intent': intent,
+                'meta': {'iphone_model': context_model, 'category': category.name if category else '',
+                         'no_result': no_result},
+                'needs_login': any(r['result'].get('error') == 'LOGIN_REQUIRED' for r in tool_results
+                                   if isinstance(r.get('result'), dict)),
+            })
     except gemini_client.GeminiBlocked:
         result = {'reply': 'Xin lỗi, mình không thể hỗ trợ nội dung này. Bạn cần tìm linh kiện iPhone nào không?',
                   'intent': 'blocked', 'tool_calls': [], 'tool_results': [], 'product_ids': [], 'meta': {}}
@@ -136,7 +198,12 @@ def handle_message(request, message: str, conversation_id=None) -> dict:
     except Exception:  # Không để lỗi bất ngờ gây 500 cho widget
         logger.exception('Lỗi chatbot không mong muốn')
         is_error, mode = True, 'basic'
-        result = fallback.answer(message, user=user)
+        try:
+            result = fallback.answer(message, user=user)
+        except Exception:
+            logger.exception('Fallback cũng lỗi')
+            result = {'reply': 'Xin lỗi, mình đang gặp chút trục trặc. Bạn thử lại sau ít phút hoặc gọi hotline giúp mình nhé.',
+                      'intent': 'error', 'tool_calls': [], 'tool_results': [], 'product_ids': [], 'meta': {}}
 
     cards = product_cards(result.get('product_ids', []), _notes_from_results(result.get('tool_results')))
     actions = []
@@ -153,6 +220,8 @@ def handle_message(request, message: str, conversation_id=None) -> dict:
 
     latency = int((time.monotonic() - started) * 1000)
     meta = {**result.get('meta', {}), 'mode': mode}
+    if not meta.get('iphone_model') and context_model:
+        meta['iphone_model'] = context_model
     reply_msg = ChatMessage.objects.create(
         conversation=conversation, role=ChatMessage.Role.ASSISTANT, content=result['reply'],
         products=[c['id'] for c in cards], intent=result.get('intent', '')[:50],
@@ -173,7 +242,7 @@ def handle_message(request, message: str, conversation_id=None) -> dict:
         'reply': result['reply'],
         'products': cards,
         'actions': actions,
-        'suggestions': _suggestions(result.get('intent', ''), meta),
+        'suggestions': _suggestions(result, meta, resolved),
         'mode': mode,
         'created_at': reply_msg.created_at.isoformat(),
     }

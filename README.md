@@ -80,7 +80,7 @@ npm run build   # build bản thu gọn
 | `DEMO_ADMIN_PASSWORD`, `DEMO_CUSTOMER_PASSWORD` | Mật khẩu tài khoản demo | Không (trống → sinh ngẫu nhiên) | |
 | `EMAIL_BACKEND`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`... | Gửi email | Không (mặc định in ra console) | |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Đăng nhập Google | Không | |
-| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TIMEOUT_SECONDS` | Chatbot AI | Không (trống → chế độ cơ bản) | `gemini-2.5-flash` |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_TIMEOUT_SECONDS` | Chatbot AI | Không (trống → chế độ cơ bản) | `gemini-3.8-flash` (hoặc `gemini-3.5-flash`) |
 | `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_RETURN_URL` | VNPay Sandbox | Không (trống → "Đang bảo trì") | |
 | `MOMO_PARTNER_CODE`, `MOMO_ACCESS_KEY`, `MOMO_SECRET_KEY`, `MOMO_*_URL` | MoMo Sandbox | Không | |
 

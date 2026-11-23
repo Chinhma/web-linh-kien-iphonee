@@ -51,7 +51,7 @@ class SocialAccountAdapter(DefaultSocialAccountAdapter):
         from django.shortcuts import redirect
 
         messages.error(request, 'Tài khoản quản trị không đăng nhập bằng Google. Vui lòng dùng tên đăng nhập và mật khẩu.')
-        raise ImmediateHttpResponse(redirect('/admin/login/'))
+        raise ImmediateHttpResponse(redirect('dashboard:login'))
 
     def populate_user(self, request, sociallogin, data):
         user = super().populate_user(request, sociallogin, data)

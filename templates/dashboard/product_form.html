@@ -7,7 +7,7 @@
 {% block content %}
 <form method="post" enctype="multipart/form-data" class="pb-24" data-product-form data-dirty-check novalidate>
   {% csrf_token %}
-  {{ form.specifications }}{{ form.highlights }}
+  {{ form.specifications }}{{ form.highlights }}{{ form.options_data }}{{ form.colors_data }}{{ form.variants_data }}
   {% if form.errors %}
     <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-danger" role="alert">
       <strong>Vui lòng sửa các lỗi sau:</strong>
@@ -29,7 +29,6 @@
           </div>
           {% include 'includes/components/field.html' with field=form.part_code %}
           {% include 'includes/components/field.html' with field=form.category %}
-          {% include 'includes/components/field.html' with field=form.brand %}
           {% include 'includes/components/field.html' with field=form.quality_grade %}
         </div>
       </section>
@@ -42,6 +41,57 @@
           {% include 'includes/components/field.html' with field=form.sale_start %}
           {% include 'includes/components/field.html' with field=form.sale_end %}
           <div class="rounded-xl bg-slate-50 p-3 text-sm" data-price-preview>—</div>
+        </div>
+        <p class="form-hint mt-3" data-price-note hidden>Sản phẩm có biến thể: khung Giá này tự lấy theo tổ hợp <strong>mặc định</strong> khi lưu – hãy nhập giá ở bảng biến thể bên dưới.</p>
+      </section>
+      <section class="card p-5" data-variants-section>
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-bold">Biến thể: Loại màn × Màu <span class="text-xs font-normal text-muted">(không bắt buộc)</span></h2>
+        </div>
+        <p class="form-hint mb-4">Khách chọn <strong>loại màn</strong> và <strong>màu</strong> trên trang sản phẩm; giá = giá của tổ hợp ở bảng biến thể (không cộng gì thêm). Tổ hợp mặc định (loại mặc định + màu mặc định) là giá hiện ở danh sách. Tồn kho sản phẩm = tổng tồn các biến thể. Bảo hành cố định {{ WARRANTY_MONTHS }} tháng miễn phí.</p>
+        <div class="mb-4 max-w-sm">{% include 'includes/components/field.html' with field=form.option_label %}</div>
+
+        {# a) Loại màn #}
+        <div class="rounded-xl border border-border p-3">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-bold">a) Loại màn</h3>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="btn-ghost btn-sm" data-option-template="screen"><i data-lucide="wand-sparkles" class="h-4 w-4"></i>6 loại màn</button>
+              <button type="button" class="btn-ghost btn-sm" data-option-template="models"><i data-lucide="smartphone" class="h-4 w-4"></i>Theo dòng máy đã tick</button>
+              <button type="button" class="btn-secondary btn-sm" data-option-add><i data-lucide="plus" class="h-4 w-4"></i>Thêm loại</button>
+            </div>
+          </div>
+          <div class="space-y-2" data-option-rows></div>
+          <p class="text-sm text-muted" data-option-empty>Chưa có loại màn.</p>
+        </div>
+
+        {# b) Màu sắc #}
+        <div class="mt-3 rounded-xl border border-border p-3">
+          <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-sm font-bold">b) Màu sắc</h3>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="btn-ghost btn-sm" data-color-template><i data-lucide="palette" class="h-4 w-4"></i>Trắng + Đen</button>
+              <button type="button" class="btn-secondary btn-sm" data-color-add><i data-lucide="plus" class="h-4 w-4"></i>Thêm màu</button>
+            </div>
+          </div>
+          <div class="space-y-2" data-color-rows></div>
+          <p class="text-sm text-muted" data-color-empty>Chưa có màu – trang sản phẩm sẽ không hiện nhóm chọn màu.</p>
+        </div>
+
+        {# c) Bảng biến thể tự sinh #}
+        <div class="mt-3 rounded-xl border border-primary/40 bg-primary-light/10 p-3">
+          <h3 class="mb-1 text-sm font-bold">c) Bảng biến thể (tự sinh = loại màn × màu)</h3>
+          <p class="form-hint mb-2">Nhập giá bán cho từng tổ hợp. <strong>Để trống giá</strong> = không bán tổ hợp đó. Nút "Áp giá cho tất cả màu" copy giá bán, giá gốc của dòng đó sang các màu khác cùng loại màn.</p>
+          {% for e in form.variants_data.errors %}<p class="form-error mb-2">{{ e }}</p>{% endfor %}
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[920px] text-sm">
+              <thead class="text-left text-xs uppercase text-muted">
+                <tr><th class="px-2 py-1">Tổ hợp</th><th class="px-2 py-1">Giá bán *</th><th class="px-2 py-1">Giá gốc</th><th class="px-2 py-1">%</th><th class="px-2 py-1">Tồn kho</th><th class="px-2 py-1">SKU</th><th class="px-2 py-1">Ảnh riêng</th><th class="px-2 py-1">Bật</th></tr>
+              </thead>
+              <tbody data-variant-rows></tbody>
+            </table>
+          </div>
+          <p class="text-sm text-muted" data-variant-empty>Thêm loại màn và/hoặc màu để sinh bảng biến thể.</p>
         </div>
       </section>
       <section class="card p-5">
@@ -113,7 +163,7 @@
         <div class="mt-2 grid grid-cols-4 gap-2" data-image-preview></div>
       </section>
       <section class="card space-y-3 p-5">
-        <h2 class="font-bold">Kho & bảo hành</h2>
+        <h2 class="font-bold">Kho</h2>
         {% if form.initial_stock %}{% include 'includes/components/field.html' with field=form.initial_stock %}
         {% else %}
           <div><span class="form-label">Tồn kho hiện tại</span><div class="text-2xl font-bold">{{ product.stock_quantity }}</div>
@@ -121,7 +171,7 @@
             <p class="form-hint">Không sửa trực tiếp – mọi thay đổi đều ghi lịch sử kho.</p></div>
         {% endif %}
         {% include 'includes/components/field.html' with field=form.low_stock_threshold %}
-        {% include 'includes/components/field.html' with field=form.warranty_months %}
+        <p class="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-800"><i data-lucide="shield-check" class="h-4 w-4"></i>{{ WARRANTY_LABEL }} – áp dụng cho mọi sản phẩm.</p>
       </section>
     </div>
   </div>
@@ -136,6 +186,7 @@
 </form>
 {{ specs_json|json_script:'specs-data' }}
 {{ highlights_json|json_script:'highlights-data' }}
+{{ variant_editor|json_script:'variant-editor-data' }}
 {{ category_codes|json_script:'category-codes' }}
 {% endblock %}
-{% block scripts %}<script type="module" src="{% static 'js/dashboard/product-form.js' %}?v=2"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/dashboard/product-form.js' %}?v=7"></script>{% endblock %}

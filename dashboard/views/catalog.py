@@ -13,7 +13,7 @@ from core.permissions import staff_required
 from core.utils import to_int
 from inventory.models import InventoryTransaction
 from inventory.services import adjust_stock
-from products.models import Brand, Category, Compatibility, IPhoneModel, Product, ProductImage
+from products.models import Category, Compatibility, IPhoneModel, Product, ProductImage
 from products.selectors import annotate_effective_price, iphone_models_grouped
 
 from ..forms import CompatibilityAddForm, CompatibilityEditForm, ProductForm, ProductImagesForm
@@ -34,13 +34,11 @@ def _product_csv(qs):
 
 @staff_required
 def product_list(request):
-    qs = annotate_effective_price(Product.objects.select_related('category', 'brand').prefetch_related('images'))
+    qs = annotate_effective_price(Product.objects.select_related('category').prefetch_related('images'))
     g = request.GET
     if g.get('category'):
         cat = Category.objects.filter(slug=g['category']).first()
         qs = qs.filter(category_id__in=cat.descendant_ids()) if cat else qs.none()
-    if g.get('brand'):
-        qs = qs.filter(brand__slug=g['brand'])
     if g.get('quality') in Product.Quality.values:
         qs = qs.filter(quality_grade=g['quality'])
     if g.get('status'):
@@ -67,9 +65,9 @@ def product_list(request):
     return render(request, 'dashboard/products.html', {
         **ctx, 'page_title': 'Sản phẩm sắp hết hàng' if low_view else 'Sản phẩm',
         'page_description': 'Nhập kho nhanh cho từng dòng.' if low_view else 'Quản lý linh kiện đang kinh doanh.',
-        'stats': stats, 'category_tree': _category_tree(), 'brands': Brand.objects.all(),
+        'stats': stats, 'category_tree': _category_tree(),
         'statuses': Product.Status.choices, 'qualities': Product.Quality.choices, 'iphone_groups': iphone_models_grouped(),
-        'has_filters': any(g.get(k) for k in ('q', 'category', 'brand', 'quality', 'status', 'stock', 'model', 'on_sale')),
+        'has_filters': any(g.get(k) for k in ('q', 'category', 'quality', 'status', 'stock', 'model', 'on_sale')),
     })
 
 
@@ -144,6 +142,28 @@ def _save_compat(request, product):
     Compatibility.objects.filter(product=product, iphone_model_id__in=existing.keys() - selected).delete()
 
 
+def _variant_editor_data(form, product) -> dict:
+    """Dữ liệu 3 bảng: loại màn, màu sắc, biến thể. Form lỗi thì lấy lại dữ liệu vừa gửi (ảnh mới phải chọn lại)."""
+    if form.is_bound:
+        def val(name):
+            v = form[name].value()
+            return v if isinstance(v, list) else []
+        return {'options': val('options_data'), 'colors': val('colors_data'), 'variants': val('variants_data')}
+    if product is None:
+        return {'options': [], 'colors': [], 'variants': []}
+    return {
+        'options': [{'id': o.pk, 'key': str(o.pk), 'name': o.name, 'description': o.description,
+                     'is_default': o.is_default, 'is_active': o.is_active} for o in product.options.all()],
+        'colors': [{'id': c.pk, 'key': str(c.pk), 'name': c.name, 'hex_code': c.hex_code,
+                    'image': c.image.url if c.image else '', 'is_default': c.is_default, 'is_active': c.is_active}
+                   for c in product.colors.all()],
+        'variants': [{'id': v.pk, 'key': f'v{v.pk}', 'option_key': str(v.option_id or ''), 'color_key': str(v.color_id or ''),
+                      'price': v.price, 'compare_price': v.compare_price, 'stock': v.stock, 'sku': v.sku,
+                      'image': v.image.url if v.image else '', 'is_active': v.is_active}
+                     for v in product.variants.all()],
+    }
+
+
 @staff_required
 def product_form(request, pk=None):
     product = get_object_or_404(Product, pk=pk) if pk else None
@@ -155,6 +175,7 @@ def product_form(request, pk=None):
                 adjust_stock(obj, form.cleaned_data['initial_stock'], InventoryTransaction.Type.INITIAL, request.user,
                              'Tồn kho ban đầu khi tạo sản phẩm', unit_cost=obj.cost_price or None)
             _save_compat(request, obj)
+            form.save_variants(obj, request.FILES, request.user)
         _save_images(request, obj)
         messages.success(request, f'Đã lưu thành công sản phẩm "{obj.name}".')
         if request.POST.get('save_add'):
@@ -168,6 +189,7 @@ def product_form(request, pk=None):
         'category_codes': {c.pk: (c.parent.code if c.parent_id else c.code) for c in Category.objects.select_related('parent')},
         'specs_json': product.specifications if product else [],
         'highlights_json': product.highlights if product else [],
+        'variant_editor': _variant_editor_data(form, product),
         'has_orders': product.order_items.exists() if product else False,
     })
 
@@ -224,6 +246,27 @@ def product_duplicate(request, pk):
     product.stock_quantity = product.sold_count = product.rating_count = product.view_count = 0
     product.rating_avg = 0
     product.save()
+    # Nhân bản loại màn, màu, biến thể (giữ giá, tồn kho về 0 như sản phẩm)
+    option_map, color_map = {}, {}
+    for option in source.options.all():
+        old = option.pk
+        option.pk = None
+        option.product = product
+        option.save()
+        option_map[old] = option
+    for color in source.colors.all():
+        old = color.pk
+        color.pk = None
+        color.product = product
+        color.save()
+        color_map[old] = color
+    for variant in source.variants.all():
+        variant.pk = None
+        variant.product = product
+        variant.option = option_map.get(variant.option_id)
+        variant.color = color_map.get(variant.color_id)
+        variant.stock = 0
+        variant.save()
     if target:
         comp = Compatibility(product=product, iphone_model=target, source='Nhân bản – cần kiểm tra')
         comp.set_status(Compatibility.Status.UNVERIFIED, request.user)

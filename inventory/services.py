@@ -41,8 +41,18 @@ def adjust_stock(product: Product, change: int, type: str, user=None, note: str 
     )
 
 
+VARIANT_STOCK_MESSAGE = ('Sản phẩm có biến thể (loại màn × màu) – vui lòng nhập tồn kho cho từng biến thể '
+                         'trong trang sửa sản phẩm (tồn kho sản phẩm = tổng các biến thể).')
+
+
+def _ensure_no_variants(product: Product) -> None:
+    if product.variants.filter(is_active=True).exists():
+        raise StockError(VARIANT_STOCK_MESSAGE)
+
+
 def import_stock(product: Product, quantity: int, unit_cost: int | None, user, note: str = '',
                  update_cost_price: bool = True) -> InventoryTransaction:
+    _ensure_no_variants(product)
     if quantity <= 0:
         raise StockError('Số lượng nhập phải lớn hơn 0.')
     with transaction.atomic():
@@ -54,6 +64,7 @@ def import_stock(product: Product, quantity: int, unit_cost: int | None, user, n
 
 def stocktake(product: Product, actual_quantity: int, user, reason: str) -> InventoryTransaction | None:
     """Điều chỉnh kiểm kê: nhập số tồn thực tế, hệ thống tự tính chênh lệch."""
+    _ensure_no_variants(product)
     if actual_quantity < 0:
         raise StockError('Số tồn thực tế không được âm.')
     if not reason.strip():

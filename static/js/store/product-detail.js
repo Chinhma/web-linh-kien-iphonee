@@ -1,5 +1,7 @@
-// Trang chi tiết: gallery + lightbox, tabs, kiểm tra tương thích theo máy.
+// Trang chi tiết: gallery + lightbox, tabs, chọn loại màn / màu (gọi API, server tính giá).
 import { apiFetch } from '../core/api.js';
+import { toast } from '../core/toast.js';
+import { refreshIcons } from '../core/utils.js';
 import { openModal } from '../core/modal.js';
 
 const gallery = document.querySelector('[data-gallery]');
@@ -52,35 +54,91 @@ if (location.hash === '#tab-reviews' || new URLSearchParams(location.search).has
   openTab('reviews');
 }
 
-// Kiểm tra máy của bạn
-const check = document.querySelector('[data-compat-check]');
-if (check) {
-  const select = check.querySelector('select');
-  const result = check.querySelector('[data-compat-result]');
-  const saved = localStorage.getItem('iparts_my_model');
-  if (saved && select.querySelector(`option[value="${CSS.escape(saved)}"]`)) select.value = saved;
-  const run = async () => {
-    if (!select.value) {
-      result.classList.add('hidden');
-      return;
+// ---------- Chọn LOẠI MÀN / MÀU: "load lại một nhịp" ----------
+// Bấm 1 ô -> loading ngắn ở khối giá + ảnh, khoá các ô -> gọi API (server tính giá) -> thay khối chọn mua,
+// thanh mua ở đáy, ảnh -> cập nhật URL ?loai=&mau= (F5 / gửi link vẫn đúng tổ hợp, nút Back quay lại tổ hợp trước).
+const panel = document.querySelector('[data-purchase-panel]');
+const buyBar = document.querySelector('[data-buy-bar]');
+const imageLoading = document.querySelector('[data-image-loading]');
+const MIN_LOADING_MS = 350;
+
+function bindStepper(root) {  // Stepper nằm trong khối được thay mới -> gắn lại sự kiện
+  root.querySelectorAll('[data-stepper]').forEach((wrap) => {
+    const input = wrap.querySelector('input');
+    const clamp = () => {
+      const max = Number(input.max) || 10;
+      input.value = Math.min(Math.max(Math.round(Number(input.value) || 1), 1), max);
+    };
+    wrap.querySelector('[data-step="-1"]').addEventListener('click', () => { input.value = Number(input.value) - 1; clamp(); });
+    wrap.querySelector('[data-step="1"]').addEventListener('click', () => {
+      if (Number(input.value) >= (Number(input.max) || 10)) toast(`Chỉ còn ${input.max} sản phẩm có thể mua.`, 'warning');
+      input.value = Number(input.value) + 1;
+      clamp();
+    });
+    input.addEventListener('change', clamp);
+  });
+}
+
+function setLoading(on) {
+  panel.classList.toggle('pointer-events-none', on);
+  panel.setAttribute('aria-busy', String(on));
+  panel.querySelectorAll('[data-loading-zone]').forEach((z) => z.classList.toggle('animate-pulse', on));
+  panel.querySelectorAll('[data-variant-picker]').forEach((z) => z.classList.toggle('opacity-60', on));
+  buyBar?.classList.toggle('opacity-60', on);
+  if (imageLoading) {
+    imageLoading.classList.toggle('hidden', !on);
+    imageLoading.classList.toggle('flex', on);
+  }
+}
+
+let busy = false;
+async function loadVariant(query, { push = true } = {}) {
+  if (!panel || busy) return;
+  busy = true;
+  setLoading(true);
+  const qty = document.getElementById('detail-qty')?.value;
+  try {
+    const [res] = await Promise.all([
+      apiFetch(`${panel.dataset.api}${query}`, { silent: true }),
+      new Promise((r) => { setTimeout(r, MIN_LOADING_MS); }),
+    ]);
+    const d = res.data;
+    panel.innerHTML = d.panel_html;
+    if (buyBar) buyBar.innerHTML = d.bar_html;
+    const qtyInput = document.getElementById('detail-qty');
+    if (qtyInput && qty) qtyInput.value = Math.min(Number(qty), Number(qtyInput.max) || 1);
+    bindStepper(panel);
+    if (mainImg && d.image) {
+      mainImg.src = d.image;
+      const lb = document.querySelector('[data-lightbox-image]');
+      if (lb) lb.src = d.image;
     }
-    localStorage.setItem('iparts_my_model', select.value);
-    try {
-      const res = await apiFetch(`${check.dataset.url}?model=${encodeURIComponent(select.value)}`, { silent: true });
-      const { status, note, model } = res.data;
-      const map = {
-        verified: ['bg-green-100 text-green-800', `✔ Tương thích với ${model}`],
-        incompatible: ['bg-red-100 text-red-800', `✖ Không tương thích với ${model}`],
-        unknown: ['bg-amber-100 text-amber-800', `Chưa có thông tin xác nhận cho ${model}, vui lòng liên hệ hoặc hỏi iParts AI Assistant`],
-      };
-      const [cls, text] = map[status] || map.unknown;
-      result.className = `mt-3 rounded-lg px-3 py-2 text-sm font-medium ${cls}`;
-      result.textContent = note ? `${text}. ${note}` : text;
-    } catch (e) {
-      result.className = 'mt-3 rounded-lg bg-red-100 px-3 py-2 text-sm text-red-800';
-      result.textContent = 'Không thể kiểm tra lúc này, vui lòng thử lại.';
+    const badge = document.querySelector('[data-image-badge]');
+    if (badge) {
+      badge.classList.toggle('hidden', !d.discount_percent);
+      badge.textContent = `-${d.discount_percent}%`;
     }
-  };
-  select.addEventListener('change', run);
-  if (select.value) run();
+    const url = new URL(location.href);
+    url.search = d.query;
+    url.hash = '';
+    history[push ? 'pushState' : 'replaceState']({ variantQuery: d.query }, '', url);
+    if (d.notice) toast(d.notice, 'warning');
+    refreshIcons();
+  } catch (e) {
+    toast('Không tải được giá của lựa chọn này, vui lòng thử lại.', 'error');
+  } finally {
+    busy = false;
+    setLoading(false);
+  }
+}
+
+if (panel) {
+  panel.addEventListener('click', (e) => {
+    const link = e.target.closest('[data-variant-link]');
+    if (!link || e.metaKey || e.ctrlKey || e.shiftKey) return;  // mở tab mới thì để trình duyệt xử lý
+    e.preventDefault();
+    if (link.getAttribute('aria-current') === 'true') return;
+    loadVariant(new URL(link.href, location.href).search);
+  });
+  window.addEventListener('popstate', () => loadVariant(location.search, { push: false }));
 }

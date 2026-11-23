@@ -1,0 +1,114 @@
+{# Khối giá + chọn LOẠI MÀN / MÀU + nút mua. Render lần đầu và trả lại qua API mỗi lần đổi lựa chọn. #}
+{# Ô giá = đúng giá tổ hợp đang chọn (server tính). Không có "Chỉ từ". #}
+<div class="relative rounded-card bg-slate-50 p-5" data-loading-zone>
+  <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+    {% if sel.original_price %}<span class="w-full text-sm text-muted line-through">{{ sel.original_price|vnd }}</span>{% endif %}
+    <span class="text-3xl font-bold text-danger" data-price>{{ sel.price|vnd }}</span>
+    {% if sel.discount_percent %}<span class="badge-danger">Giảm {{ sel.discount_percent }}%</span>{% endif %}
+  </div>
+  {% if sel.promo_end %}<p class="mt-1 text-xs text-danger">Khuyến mãi kết thúc lúc {{ sel.promo_end|dt }}</p>{% endif %}
+  {% if sel.label %}<p class="mt-1 text-sm text-muted">Đang chọn: <strong class="text-text">{{ sel.label }}</strong></p>{% endif %}
+  <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+    <span class="flex items-center gap-1.5">
+      <span class="h-2.5 w-2.5 rounded-full {% if sel.stock_status == 'in_stock' %}bg-success{% elif sel.stock_status == 'low_stock' %}bg-warning{% else %}bg-danger{% endif %}"></span>{{ sel.stock_label }}
+    </span>
+    <span class="text-muted">SKU: <strong class="text-text">{{ sel.sku }}</strong></span>
+    <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i>{{ WARRANTY_LABEL }}</span>
+  </div>
+</div>
+
+{% if sel.notice %}
+  <p class="mt-3 flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status" data-variant-notice><i data-lucide="info" class="h-4 w-4 shrink-0"></i>{{ sel.notice }}</p>
+{% endif %}
+
+{% if sel.has_variants %}
+  <div id="chon-mua" class="scroll-mt-24" data-variant-picker>
+    {% if sel.option_cards %}
+      <div class="mt-5">
+        <h2 class="mb-2 text-sm font-semibold">{{ sel.option_label }}</h2>
+        <div class="grid grid-cols-2 gap-2 lg:grid-cols-3">
+          {% for c in sel.option_cards %}
+            {% if c.disabled and not c.selected %}
+              <span class="relative flex min-h-[60px] cursor-not-allowed flex-col items-center justify-center rounded-xl border border-dashed border-border bg-white px-2 py-2 text-center opacity-50" title="Hết hàng" aria-disabled="true">
+                <span class="text-sm font-semibold leading-snug">{{ c.name }}</span>
+                <span class="text-xs text-muted">Hết hàng</span>
+              </span>
+            {% else %}
+              <a href="{{ c.query }}" rel="nofollow" data-variant-link data-loai="{{ c.slug }}" {% if c.selected %}aria-current="true"{% endif %}
+                 class="relative flex min-h-[60px] flex-col items-center justify-center rounded-xl border bg-white px-2 py-2 text-center transition {% if c.selected %}border-primary ring-1 ring-primary{% else %}border-border hover:border-primary/60{% endif %}">
+                <span class="text-sm font-semibold leading-snug">{{ c.name }}</span>
+                {% if c.price %}<span class="text-xs {% if c.selected %}font-semibold text-danger{% else %}text-muted{% endif %}">{{ c.price|vnd }}</span>{% endif %}
+                {% if c.disabled %}<span class="text-[11px] text-muted">Hết hàng</span>{% endif %}
+                {% if c.selected %}<span class="absolute -right-px -top-px flex h-5 w-5 items-center justify-center rounded-bl-lg rounded-tr-[10px] bg-primary text-white"><i data-lucide="check" class="h-3 w-3"></i></span>{% endif %}
+              </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+        {% if sel.option_description %}<p class="mt-2 rounded-lg bg-primary-light/40 px-3 py-2 text-sm leading-relaxed text-text">{{ sel.option_description }}</p>{% endif %}
+      </div>
+    {% endif %}
+
+    {% if sel.color_cards %}
+      <div class="mt-4">
+        <h2 class="mb-2 text-sm font-semibold">Màu sắc</h2>
+        <div class="grid grid-cols-2 gap-2 lg:grid-cols-3">
+          {% for c in sel.color_cards %}
+            {% if c.disabled %}
+              <span class="relative flex cursor-not-allowed items-center gap-2 rounded-xl border border-dashed border-border bg-white px-2.5 py-2 opacity-50" title="Hết hàng" aria-disabled="true">
+                {% if c.image %}<img src="{{ c.image }}" alt="" class="h-9 w-9 shrink-0 rounded-md object-cover">{% else %}<span class="h-8 w-8 shrink-0 rounded-full border border-border" style="background: {{ c.hex }}"></span>{% endif %}
+                <span class="min-w-0 leading-tight"><span class="block truncate text-sm font-semibold">{{ c.name }}</span><span class="block text-xs text-muted">Hết hàng</span></span>
+              </span>
+            {% else %}
+              <a href="{{ c.query }}" rel="nofollow" data-variant-link data-mau="{{ c.slug }}" {% if c.selected %}aria-current="true"{% endif %}
+                 class="relative flex items-center gap-2 rounded-xl border bg-white px-2.5 py-2 transition {% if c.selected %}border-primary ring-1 ring-primary{% else %}border-border hover:border-primary/60{% endif %}">
+                {% if c.image %}<img src="{{ c.image }}" alt="" class="h-9 w-9 shrink-0 rounded-md object-cover">{% else %}<span class="h-8 w-8 shrink-0 rounded-full border border-border shadow-inner" style="background: {{ c.hex }}"></span>{% endif %}
+                <span class="min-w-0 leading-tight">
+                  <span class="block truncate text-sm font-semibold">{{ c.name }}</span>
+                  {% if c.price %}<span class="block text-xs {% if c.selected %}font-semibold text-danger{% else %}text-muted{% endif %}">{{ c.price|vnd }}</span>{% endif %}
+                </span>
+                {% if c.selected %}<span class="absolute -right-px -top-px flex h-5 w-5 items-center justify-center rounded-bl-lg rounded-tr-[10px] bg-primary text-white"><i data-lucide="check" class="h-3 w-3"></i></span>{% endif %}
+              </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+{# Mua hàng (Customer/Guest) – Admin thấy khối Công cụ quản trị #}
+{% if not is_admin_user %}
+  <div class="mt-6 flex flex-wrap items-center gap-3">
+    {% if can_buy %}
+      {% include 'includes/components/stepper.html' with input_id='detail-qty' max=max_qty %}
+      <button type="button" class="btn-secondary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-variant-id="{{ sel.variant_id|default:'' }}" data-product-name="{{ product.name }}" data-qty-input="#detail-qty"><i data-lucide="shopping-cart" class="h-5 w-5"></i>Thêm vào giỏ hàng</button>
+      <button type="button" class="btn-primary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-variant-id="{{ sel.variant_id|default:'' }}" data-buy-now data-product-name="{{ product.name }}" data-qty-input="#detail-qty">Mua ngay</button>
+    {% else %}
+      <button type="button" disabled class="btn btn-lg flex-1 bg-slate-100 text-muted">{% if product.status != 'active' %}Ngừng kinh doanh{% else %}Hết hàng{% endif %}</button>
+    {% endif %}
+    <button type="button" data-wishlist-toggle="{{ product.pk }}" aria-pressed="{{ in_wishlist|yesno:'true,false' }}"
+            class="group/heart icon-btn h-12 w-12 border border-border [&.is-wishlisted]:text-danger {% if in_wishlist %}is-wishlisted{% endif %}" aria-label="Yêu thích">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="group-[.is-wishlisted]/heart:fill-current" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+    </button>
+  </div>
+{% else %}
+  <div class="mt-6 rounded-card border border-primary/30 bg-primary-light/40 p-5">
+    <h2 class="flex items-center gap-2 font-bold"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>Công cụ quản trị</h2>
+    <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
+      <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Tồn kho</dt><dd class="text-lg font-bold">{{ product.stock_quantity }}</dd></div>
+      <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Giá nhập</dt><dd class="text-lg font-bold">{{ product.cost_price|vnd }}</dd></div>
+      <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Trạng thái</dt><dd class="mt-1">{% status_badge product.status product.get_status_display %}</dd></div>
+    </dl>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <a href="{% url 'dashboard:product_edit' product.pk %}" class="btn-primary"><i data-lucide="pencil" class="h-4 w-4"></i>Sửa sản phẩm</a>
+      <a href="{% url 'dashboard:inventory_import' %}?product={{ product.pk }}" class="btn-secondary"><i data-lucide="package-plus" class="h-4 w-4"></i>Nhập kho</a>
+      <a href="{% url 'dashboard:compat_list' %}?q={{ product.sku|urlencode }}" class="btn-secondary"><i data-lucide="git-compare-arrows" class="h-4 w-4"></i>Quản lý tương thích</a>
+    </div>
+  </div>
+{% endif %}
+
+<ul class="mt-6 grid gap-3 text-sm sm:grid-cols-3">
+  <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>{{ WARRANTY_LABEL }}</li>
+  <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="refresh-ccw" class="h-5 w-5 text-primary"></i>Đổi trả 7 ngày</li>
+  <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="truck" class="h-5 w-5 text-primary"></i>Giao toàn quốc</li>
+</ul>

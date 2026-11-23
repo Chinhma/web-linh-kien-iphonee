@@ -12,10 +12,12 @@ from django.db.models import F
 from django.utils import timezone
 
 from cart.models import CartItem
+from cart.services import variant_is_sellable
 from core.models import StoreSetting
 from inventory.models import InventoryTransaction
 from inventory.services import StockError, adjust_stock
-from products.models import Product
+from core.constants import WARRANTY_MONTHS
+from products.models import Product, ProductVariant
 from promotions import services as coupon_services
 
 from .models import Order, OrderItem, OrderStatusHistory
@@ -80,6 +82,12 @@ def create_order(user, data: CheckoutData, idempotency_key: str) -> Order:
             raise OrderError('Vui lòng chọn sản phẩm để thanh toán.', code='EMPTY_SELECTION')
         product_ids = [ci.product_id for ci in cart_items]
         products = {p.pk: p for p in Product.objects.select_for_update().select_related('category').filter(pk__in=product_ids)}
+        # Khóa biến thể để kiểm tra & trừ tồn kho theo biến thể (không tin dữ liệu trình duyệt)
+        variants = {v.pk: v for v in ProductVariant.objects.select_for_update().select_related('option', 'color').filter(
+            pk__in=[ci.variant_id for ci in cart_items if ci.variant_id])}
+        for ci in cart_items:
+            if ci.variant_id:
+                ci.variant = variants[ci.variant_id]
 
         errors = {}
         for ci in cart_items:
@@ -88,10 +96,20 @@ def create_order(user, data: CheckoutData, idempotency_key: str) -> Order:
                 errors[str(ci.product_id)] = f'"{ci.product.name}" đã ngừng kinh doanh.'
             elif product.stock_quantity < ci.quantity:
                 errors[str(ci.product_id)] = f'"{product.name}" chỉ còn {product.stock_quantity} sản phẩm.'
+            elif ci.variant_id and not variant_is_sellable(ci.variant):
+                errors[str(ci.product_id)] = f'"{product.name} – {ci.variant.label}" đã ngừng bán.'
+            elif ci.variant_id and ci.variant.stock < ci.quantity:
+                errors[str(ci.product_id)] = f'"{product.name} – {ci.variant.label}" chỉ còn {ci.variant.stock} sản phẩm.'
+            elif not ci.variant_id and product.variants.filter(is_active=True).exists():
+                errors[str(ci.product_id)] = f'Vui lòng chọn lại loại màn / màu cho "{product.name}".'
         if errors:
             raise OrderError('Một số sản phẩm không đủ điều kiện đặt hàng.', errors, code='OUT_OF_STOCK')
 
-        subtotal = sum(products[ci.product_id].effective_price * ci.quantity for ci in cart_items)
+        def unit_price(ci) -> int:  # Giá luôn tính lại ở backend theo biến thể (BH 12 tháng miễn phí)
+            ci.product = products[ci.product_id]
+            return ci.unit_price
+
+        subtotal = sum(unit_price(ci) * ci.quantity for ci in cart_items)
         discount, coupon = 0, None
         if data.coupon_code:
             ok, discount, message, coupon = coupon_services.validate_coupon(data.coupon_code, user, subtotal)
@@ -123,12 +141,21 @@ def create_order(user, data: CheckoutData, idempotency_key: str) -> Order:
                              f'Xuất kho cho đơn {order.code}', order=order)
             except StockError as exc:
                 raise OrderError(str(exc), {str(product.pk): str(exc)}, code='OUT_OF_STOCK')
+            if ci.variant_id:  # Trừ tồn biến thể bằng UPDATE có điều kiện (chống bán vượt tồn)
+                if not ProductVariant.objects.filter(pk=ci.variant_id, stock__gte=ci.quantity).update(
+                        stock=F('stock') - ci.quantity):
+                    msg = f'"{product.name} – {ci.variant.label}" không đủ hàng.'
+                    raise OrderError(msg, {str(product.pk): msg}, code='OUT_OF_STOCK')
+            v = ci.variant if ci.variant_id else None
             image = product.primary_image
-            OrderItem.objects.create(
-                order=order, product=product, product_name=product.name, product_sku=product.sku,
-                product_image=image.image.name if image else '',
-                unit_price=product.effective_price, quantity=ci.quantity,
-                line_total=product.effective_price * ci.quantity,
+            OrderItem.objects.create(  # Bản chụp lúc mua: loại màn, màu, số tháng BH, giá
+                order=order, product=product, product_name=product.name, product_sku=(v.sku if v and v.sku else product.sku),
+                variant=v, option=v.option if v else None,
+                option_name=v.option.name if v and v.option_id else '', color_name=v.color.name if v and v.color_id else '',
+                warranty_months=WARRANTY_MONTHS,
+                product_image=(v.image.name if v and v.image else (image.image.name if image else '')),
+                unit_price=unit_price(ci), quantity=ci.quantity,
+                line_total=unit_price(ci) * ci.quantity,
             )
         OrderStatusHistory.objects.create(order=order, from_status='', to_status=S.PENDING, changed_by=user,
                                           note='Khách hàng đặt hàng')
@@ -248,6 +275,8 @@ def _restock(order: Order, actor) -> None:
         if item.product_id:
             adjust_stock(item.product, item.quantity, InventoryTransaction.Type.RETURN_CANCEL, actor,
                          f'Hoàn kho do hủy đơn {order.code}', order=order)
+            if item.variant_id:
+                ProductVariant.objects.filter(pk=item.variant_id).update(stock=F('stock') + item.quantity)
 
 
 def mark_refunded(order: Order, actor, note: str) -> Order:
@@ -288,8 +317,12 @@ def reorder(user, order: Order) -> int:
     for item in order.items.all():
         if not item.product_id:
             continue
+        # Đúng biến thể cũ; nếu đã bị xóa thì tìm biến thể cùng tên loại màn + màu
+        variant_id = (item.product.variants.filter(pk=item.variant_id, is_active=True).values_list('pk', flat=True).first()
+                      or item.product.variants.filter(option__name=item.option_name or None, color__name=item.color_name or None,
+                                                      is_active=True).values_list('pk', flat=True).first())
         try:
-            add_to_cart(user, item.product_id, item.quantity)
+            add_to_cart(user, item.product_id, item.quantity, variant_id=variant_id)
             added += 1
         except CartError:
             continue

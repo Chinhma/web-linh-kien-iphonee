@@ -13,8 +13,9 @@
     {# ---------- Gallery ---------- #}
     <section aria-label="Hình ảnh sản phẩm" data-gallery>
       <button type="button" class="card relative block aspect-square w-full overflow-hidden" data-gallery-main aria-label="Xem ảnh lớn">
-        <img src="{{ product.image_url }}" alt="{{ product.name }}" class="h-full w-full object-cover transition duration-300 hover:scale-110" data-gallery-image>
-        {% if product.is_on_sale %}<span class="badge absolute left-3 top-3 bg-danger text-white">-{{ product.discount_percent }}%</span>{% endif %}
+        <img src="{{ sel.image }}" alt="{{ product.name }}" class="h-full w-full object-cover transition duration-300 hover:scale-110" data-gallery-image data-default-src="{{ product.image_url }}">
+        <span class="badge absolute left-3 top-3 bg-danger text-white {% if not sel.discount_percent %}hidden{% endif %}" data-image-badge>-{{ sel.discount_percent }}%</span>
+        <span class="pointer-events-none absolute inset-0 hidden items-center justify-center bg-white/60 backdrop-blur-[1px]" data-image-loading><span class="h-9 w-9 animate-spin rounded-full border-4 border-primary/30 border-t-primary"></span></span>
       </button>
       {% if images|length > 1 %}
         <div class="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
@@ -31,8 +32,6 @@
     <section>
       <h1 class="text-2xl md:text-3xl">{{ product.name }}</h1>
       <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span class="text-muted">SKU: <strong class="text-text">{{ product.sku }}</strong></span>
-        {% if product.brand %}<span class="badge-muted">{{ product.brand.name }}</span>{% endif %}
         <span class="badge-primary">{{ product.get_quality_grade_display }}</span>
       </div>
       <a href="#tab-reviews" data-open-tab="reviews" class="mt-2 inline-flex items-center gap-2 text-sm text-muted hover:text-primary">
@@ -40,89 +39,17 @@
         {% if product.rating_count %}{{ product.rating_avg|floatformat:1 }} ({{ product.rating_count }} đánh giá){% else %}Chưa có đánh giá{% endif %}
       </a>
 
-      <div class="card mt-5 p-5">
-        <div class="flex flex-wrap items-baseline gap-3">
-          <span class="text-3xl font-bold text-primary">{{ product.effective_price|vnd }}</span>
-          {% if product.is_on_sale %}
-            <span class="text-lg text-muted line-through">{{ product.price|vnd }}</span>
-            <span class="badge-danger">Giảm {{ product.discount_percent }}%</span>
-          {% endif %}
-        </div>
-        {% if product.is_on_sale and product.sale_end %}<p class="mt-1 text-xs text-danger">Khuyến mãi kết thúc lúc {{ product.sale_end|dt }}</p>{% endif %}
-        <div class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          <span class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full {% if product.stock_status == 'in_stock' %}bg-success{% elif product.stock_status == 'low_stock' %}bg-warning{% else %}bg-danger{% endif %}"></span>{{ product.stock_label }}
-          </span>
-          <span class="flex items-center gap-1.5"><i data-lucide="shield-check" class="h-4 w-4 text-success"></i>Bảo hành {{ product.warranty_months }} tháng</span>
-        </div>
-      </div>
-
-      {# Tương thích #}
-      <div class="mt-5">
-        <h2 class="mb-2 text-base font-semibold">Tương thích với</h2>
-        {% if verified_comps %}
-          <div class="flex flex-wrap gap-2">
-            {% for c in verified_comps %}
-              <a href="{% url 'products:compatibility' %}?model={{ c.iphone_model.slug }}" class="chip"><i data-lucide="check" class="h-3.5 w-3.5 text-success"></i>{{ c.iphone_model.name }}</a>
-            {% endfor %}
-          </div>
-          {% for c in verified_comps %}{% if c.note %}<p class="mt-2 text-xs text-muted"><strong>{{ c.iphone_model.name }}:</strong> {{ c.note }}</p>{% endif %}{% endfor %}
-        {% else %}
-          <p class="text-sm text-muted">Chưa có dữ liệu tương thích đã xác nhận.</p>
-        {% endif %}
-        {% for c in incompatible_comps %}
-          <p class="mt-2 flex items-center gap-1.5 text-sm text-danger"><i data-lucide="ban" class="h-4 w-4"></i>Không dùng cho {{ c.iphone_model.name }}{% if c.note %} – {{ c.note }}{% endif %}</p>
-        {% endfor %}
-      </div>
-
-      {# Kiểm tra máy của bạn #}
-      <div class="mt-5 rounded-card border border-dashed border-primary/40 bg-primary-light/40 p-4" data-compat-check data-url="{% url 'products:api_product_check' product.pk %}">
-        <label for="check-model" class="form-label flex items-center gap-2"><i data-lucide="smartphone" class="h-4 w-4 text-primary"></i>Kiểm tra máy của bạn</label>
-        <select id="check-model" class="form-input">
-          <option value="">— Chọn dòng iPhone của bạn —</option>
-          {% for group in iphone_groups %}
-            <optgroup label="{{ group.label }}">{% for m in group.models %}<option value="{{ m.slug }}">{{ m.name }}</option>{% endfor %}</optgroup>
-          {% endfor %}
-        </select>
-        <div data-compat-result class="mt-3 hidden rounded-lg px-3 py-2 text-sm font-medium" role="status"></div>
-      </div>
-
-      {# Mua hàng (Customer/Guest) – Admin thấy khối Công cụ quản trị #}
-      {% if not is_admin_user %}
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          {% if product.is_purchasable %}
-            {% include 'includes/components/stepper.html' with input_id='detail-qty' max=max_qty %}
-            <button type="button" class="btn-secondary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-product-name="{{ product.name }}" data-qty-input="#detail-qty"><i data-lucide="shopping-cart" class="h-5 w-5"></i>Thêm vào giỏ hàng</button>
-            <button type="button" class="btn-primary btn-lg flex-1" data-add-to-cart="{{ product.pk }}" data-buy-now data-product-name="{{ product.name }}" data-qty-input="#detail-qty">Mua ngay</button>
-          {% else %}
-            <button type="button" disabled class="btn btn-lg flex-1 bg-slate-100 text-muted">{% if product.stock_quantity == 0 %}Hết hàng{% else %}Ngừng kinh doanh{% endif %}</button>
-          {% endif %}
-          <button type="button" data-wishlist-toggle="{{ product.pk }}" aria-pressed="{{ in_wishlist|yesno:'true,false' }}"
-                  class="group/heart icon-btn h-12 w-12 border border-border [&.is-wishlisted]:text-danger {% if in_wishlist %}is-wishlisted{% endif %}" aria-label="Yêu thích">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path class="group-[.is-wishlisted]/heart:fill-current" d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-          </button>
-        </div>
-      {% else %}
-        <div class="mt-6 rounded-card border border-primary/30 bg-primary-light/40 p-5">
-          <h2 class="flex items-center gap-2 font-bold"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>Công cụ quản trị</h2>
-          <dl class="mt-3 grid grid-cols-3 gap-3 text-sm">
-            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Tồn kho</dt><dd class="text-lg font-bold">{{ product.stock_quantity }}</dd></div>
-            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Giá nhập</dt><dd class="text-lg font-bold">{{ product.cost_price|vnd }}</dd></div>
-            <div class="rounded-xl bg-white p-3"><dt class="text-xs text-muted">Trạng thái</dt><dd class="mt-1">{% status_badge product.status product.get_status_display %}</dd></div>
-          </dl>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <a href="{% url 'dashboard:product_edit' product.pk %}" class="btn-primary"><i data-lucide="pencil" class="h-4 w-4"></i>Sửa sản phẩm</a>
-            <a href="{% url 'dashboard:inventory_import' %}?product={{ product.pk }}" class="btn-secondary"><i data-lucide="package-plus" class="h-4 w-4"></i>Nhập kho</a>
-            <a href="{% url 'dashboard:compat_list' %}?q={{ product.sku|urlencode }}" class="btn-secondary"><i data-lucide="git-compare-arrows" class="h-4 w-4"></i>Quản lý tương thích</a>
-          </div>
-        </div>
+      {% if verified_comps %}
+        <p class="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-muted">
+          <i data-lucide="smartphone" class="h-4 w-4"></i>Dùng cho:
+          {% for c in verified_comps %}<a href="{% url 'products:compatibility' %}?model={{ c.iphone_model.slug }}" class="font-medium text-text hover:text-primary">{{ c.iphone_model.name }}</a>{% if not forloop.last %},{% endif %}{% endfor %}
+        </p>
       {% endif %}
 
-      <ul class="mt-6 grid gap-3 text-sm sm:grid-cols-3">
-        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="shield-check" class="h-5 w-5 text-primary"></i>Bảo hành {{ product.warranty_months }} tháng</li>
-        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="refresh-ccw" class="h-5 w-5 text-primary"></i>Đổi trả 7 ngày</li>
-        <li class="flex items-center gap-2 rounded-xl bg-slate-50 p-3"><i data-lucide="truck" class="h-5 w-5 text-primary"></i>Giao toàn quốc</li>
-      </ul>
+      {# Khối giá + chọn LOẠI MÀN / MÀU + nút mua: đổi lựa chọn -> gọi API, thay nội dung (không tải lại cả trang) #}
+      <div class="relative mt-5" data-purchase-panel data-api="{% url 'products:api_product_variant' product.pk %}" aria-live="polite">
+        {% include 'store/_purchase_panel.html' %}
+      </div>
       <p class="mt-4 text-sm text-muted">Cần tư vấn? Gọi <a href="tel:{{ store.hotline }}" class="link">{{ store.hotline_display }}</a></p>
     </section>
   </div>
@@ -138,19 +65,27 @@
     </div>
     <div class="p-5 md:p-8">
       <div data-tab-panel="description" class="prose-ip max-w-3xl text-sm leading-relaxed">
+        {% if sel.label %}<p class="rounded-xl bg-primary-light/40 px-4 py-3">Đang chọn: <strong>{{ sel.label }}</strong>{% if sel.option_description %} – {{ sel.option_description }}{% endif %}</p>{% endif %}
         {% if product.short_description %}<p class="font-medium">{{ product.short_description }}</p>{% endif %}
         {{ product.description|simple_markdown|default:'<p class="text-muted">Chưa có mô tả.</p>' }}
       </div>
       <div data-tab-panel="specs" hidden>
-        {% if product.specifications %}
+        {% if product.specifications or sel.has_variants %}
           <table class="w-full max-w-2xl text-sm">
-            <tbody>{% for spec in product.specifications %}<tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">{{ spec.label }}</th><td class="px-4 py-3">{{ spec.value }}</td></tr>{% endfor %}</tbody>
+            <tbody>
+              {% if sel.has_variants %}
+                {% if sel.option %}<tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">{{ sel.option_label }}</th><td class="px-4 py-3 font-semibold">{{ sel.option.name }}</td></tr>{% endif %}
+                {% if sel.color %}<tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">Màu sắc</th><td class="px-4 py-3">{{ sel.color.name }}</td></tr>{% endif %}
+                <tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">SKU</th><td class="px-4 py-3">{{ sel.sku }}</td></tr>
+              {% endif %}
+              <tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">Bảo hành</th><td class="px-4 py-3">{{ WARRANTY_LABEL }}</td></tr>
+              {% for spec in product.specifications %}<tr class="border-b border-border"><th class="w-1/3 bg-slate-50 px-4 py-3 text-left font-medium text-muted">{{ spec.label }}</th><td class="px-4 py-3">{{ spec.value }}</td></tr>{% endfor %}</tbody>
           </table>
         {% else %}<p class="text-sm text-muted">Chưa có thông số.</p>{% endif %}
       </div>
       <div data-tab-panel="guide" hidden class="prose-ip max-w-3xl text-sm">{{ product.usage_guide|simple_markdown|default:'<p class="text-muted">Chưa có hướng dẫn.</p>' }}</div>
       <div data-tab-panel="warranty" hidden class="prose-ip max-w-3xl text-sm">
-        <p>Sản phẩm được bảo hành <strong>{{ product.warranty_months }} tháng</strong> kể từ ngày nhận hàng.</p>
+        <p>Mọi sản phẩm được <strong>bảo hành {{ WARRANTY_MONTHS }} tháng miễn phí</strong> kể từ ngày nhận hàng.</p>
         {% if warranty_page %}{{ warranty_page.content|truncatewords:120|simple_markdown }}<a href="{{ warranty_page.get_absolute_url }}" class="link">Xem đầy đủ chính sách bảo hành</a>{% endif %}
       </div>
       <div data-tab-panel="reviews" hidden>
@@ -230,6 +165,13 @@
   {% endif %}
 </div>
 
+{% if not is_admin_user %}
+  <div class="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 shadow-[0_-4px_16px_rgba(15,23,42,.08)] backdrop-blur" data-buy-bar>
+    {% include 'store/_buy_bar.html' %}
+  </div>
+  <div class="h-20" aria-hidden="true"></div>
+{% endif %}
+
 {# Lightbox #}
 <div id="lightbox" data-modal hidden class="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/90 p-4" role="dialog" aria-label="Xem ảnh">
   <button type="button" data-modal-close class="absolute right-4 top-4 text-white" aria-label="Đóng"><i data-lucide="x" class="h-8 w-8"></i></button>
@@ -239,4 +181,4 @@
 </div>
 {% endblock %}
 
-{% block scripts %}<script type="module" src="{% static 'js/store/product-detail.js' %}"></script>{% endblock %}
+{% block scripts %}<script type="module" src="{% static 'js/store/product-detail.js' %}?v=4"></script>{% endblock %}

@@ -5,6 +5,7 @@ from accounts.forms import style_fields
 from chatbot.models import ChatbotSetting
 from core.models import FAQ, Banner, Page, StoreSetting
 from core.validators import validate_image_file
+from products.models import generate_sku  # noqa: F401  (dùng lại ở views)
 from products.models import Brand, Category, Compatibility, IPhoneModel, Product
 from promotions.models import Coupon
 
@@ -113,14 +114,17 @@ class ProductForm(StyledModelForm):
     initial_stock = forms.IntegerField(label='Tồn kho đầu kỳ', min_value=0, initial=0, required=False)
     specifications = forms.JSONField(required=False, widget=forms.HiddenInput)
     highlights = forms.JSONField(required=False, widget=forms.HiddenInput)
+    options_data = forms.JSONField(label='Loại màn', required=False, widget=forms.HiddenInput)
+    colors_data = forms.JSONField(label='Màu sắc', required=False, widget=forms.HiddenInput)
+    variants_data = forms.JSONField(label='Biến thể', required=False, widget=forms.HiddenInput)
     category = CategoryLeafChoiceField(label='Danh mục')
 
     class Meta:
         model = Product
-        fields = ['name', 'slug', 'sku', 'part_code', 'category', 'brand', 'quality_grade', 'status', 'is_featured',
+        fields = ['name', 'slug', 'sku', 'part_code', 'category', 'quality_grade', 'status', 'is_featured',
                   'requires_technician', 'install_difficulty', 'cost_price', 'price', 'sale_price', 'sale_start',
-                  'sale_end', 'low_stock_threshold', 'warranty_months', 'short_description', 'description',
-                  'highlights', 'usage_guide', 'specifications']
+                  'sale_end', 'low_stock_threshold', 'short_description', 'description',
+                  'highlights', 'usage_guide', 'specifications', 'option_label']
         widgets = {
             'sale_start': forms.DateTimeInput(attrs=DT, format='%Y-%m-%dT%H:%M'),
             'sale_end': forms.DateTimeInput(attrs=DT, format='%Y-%m-%dT%H:%M'),
@@ -138,6 +142,7 @@ class ProductForm(StyledModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields.pop('initial_stock')
+        self.fields['option_label'].widget.attrs['placeholder'] = 'Loại màn hình'
         self.fields['slug'].required = False
         self.fields['sku'].required = False
         self.fields['sku'].help_text = 'Để trống sẽ tự sinh theo dạng IP-{MÃ_DANH_MỤC}-{MÃ_MODEL}-{SỐ}.'
@@ -162,6 +167,133 @@ class ProductForm(StyledModelForm):
         data = self.cleaned_data.get('highlights') or []
         return [str(x).strip()[:200] for x in data if str(x).strip()][:10] if isinstance(data, list) else []
 
+    # ------------------------------------------------------------ Biến thể: LOẠI MÀN × MÀU
+    @staticmethod
+    def _int(v):
+        try:
+            n = int(str(v).replace('.', '').replace(',', '').strip())
+            return n if n >= 0 else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _rows(data, limit):
+        return [r for r in (data if isinstance(data, list) else [])[:limit] if isinstance(r, dict)]
+
+    def _clean_group(self, field, label, extra=()):
+        """Loại màn / màu: [{id, key, name, ..., is_default, is_active}] – tên không trùng, tối đa 1 mặc định."""
+        rows, names = [], set()
+        for i, row in enumerate(self._rows(self.cleaned_data.get(field), 30)):
+            name = str(row.get('name', '')).strip()[:100]
+            if not name:
+                continue
+            if name.lower() in names:
+                raise forms.ValidationError(f'{label} "{name}" bị trùng tên.')
+            names.add(name.lower())
+            item = {'id': self._int(row.get('id')), 'key': str(row.get('key') or f'new{i}')[:20], 'name': name,
+                    'is_default': bool(row.get('is_default')), 'is_active': bool(row.get('is_active', True)),
+                    'display_order': i}
+            for key, fn in extra:
+                item[key] = fn(row.get(key))
+            rows.append(item)
+        if sum(r['is_default'] for r in rows) > 1:
+            raise forms.ValidationError(f'Chỉ được chọn 1 {label.lower()} mặc định.')
+        if rows and not any(r['is_default'] and r['is_active'] for r in rows):
+            first = next((r for r in rows if r['is_active']), rows[0])
+            for r in rows:
+                r['is_default'] = r is first
+        return rows
+
+    def clean_options_data(self):
+        return self._clean_group('options_data', 'Loại màn',
+                                 extra=[('description', lambda v: str(v or '').strip()[:300])])
+
+    def clean_colors_data(self):
+        import re
+
+        return self._clean_group('colors_data', 'Màu', extra=[
+            ('hex_code', lambda v: v if re.fullmatch(r'#[0-9a-fA-F]{6}', str(v or '')) else '#E2E8F0'),
+            ('remove_image', bool)])
+
+    def clean_variants_data(self):
+        """Bảng biến thể: [{id, key, option_key, color_key, price, compare_price, stock, sku, is_active, remove_image}].
+        Dòng để trống giá = không bán tổ hợp đó (không tạo / xóa)."""
+        rows = []
+        for i, row in enumerate(self._rows(self.cleaned_data.get('variants_data'), 400)):
+            price = self._int(row.get('price'))
+            if not price:
+                continue
+            compare = self._int(row.get('compare_price')) or None
+            name = ' – '.join(x for x in (row.get('option_name'), row.get('color_name')) if x) or 'Biến thể'
+            if compare is not None and compare <= price:
+                raise forms.ValidationError(f'"{name}": giá gốc phải lớn hơn giá bán (hoặc để trống).')
+            rows.append({'id': self._int(row.get('id')), 'key': str(row.get('key') or f'v{i}')[:40],
+                         'option_key': str(row.get('option_key') or ''), 'color_key': str(row.get('color_key') or ''),
+                         'price': price, 'compare_price': compare, 'stock': self._int(row.get('stock')) or 0,
+                         'sku': str(row.get('sku', '')).strip()[:50], 'is_active': bool(row.get('is_active', True)),
+                         'remove_image': bool(row.get('remove_image'))})
+        return rows
+
+    def save_variants(self, product, files=None, user=None) -> None:
+        """Lưu loại màn, màu, biến thể (kèm ảnh); xóa dòng bị bỏ; đồng bộ giá hiển thị + tồn kho sản phẩm."""
+        from core.validators import validate_image_file
+        from products.models import ProductColor, ProductOption, ProductVariant
+
+        files = files or {}
+
+        def take_image(obj, prefix, key, remove):
+            if remove and obj.image:
+                obj.image = ''
+            upload = files.get(f'{prefix}_{key}')
+            if upload:
+                try:
+                    validate_image_file(upload)
+                    obj.image = upload
+                except forms.ValidationError:
+                    pass  # Ảnh sai định dạng/dung lượng: bỏ qua, giữ ảnh cũ
+
+        def save_group(model, rows, fields, image_prefix=None):
+            existing = {o.pk: o for o in model.objects.filter(product=product)}
+            by_key, keep = {}, set()
+            for row in rows:
+                obj = existing.get(row['id']) or model(product=product)
+                for f in fields:
+                    setattr(obj, f, row[f])
+                if image_prefix:
+                    take_image(obj, image_prefix, row['key'], row.get('remove_image'))
+                obj.save()
+                keep.add(obj.pk)
+                by_key[row['key']] = obj
+                if row['id']:
+                    by_key[str(row['id'])] = obj
+            model.objects.filter(product=product).exclude(pk__in=keep).delete()
+            return by_key
+
+        common = ('name', 'is_default', 'is_active', 'display_order')
+        options = save_group(ProductOption, self.cleaned_data.get('options_data') or [], common + ('description',))
+        colors = save_group(ProductColor, self.cleaned_data.get('colors_data') or [], common + ('hex_code',), 'color_image')
+
+        existing = {v.pk: v for v in ProductVariant.objects.filter(product=product)}
+        by_pair = {(v.option_id, v.color_id): v for v in existing.values()}
+        keep = set()
+        for row in self.cleaned_data.get('variants_data') or []:
+            option = options.get(row['option_key']) if row['option_key'] else None
+            color = colors.get(row['color_key']) if row['color_key'] else None
+            if (row['option_key'] and option is None) or (row['color_key'] and color is None):
+                continue  # Tổ hợp của loại/màu vừa bị xóa
+            pair = (option.pk if option else None, color.pk if color else None)
+            variant = existing.get(row['id']) or by_pair.get(pair) or ProductVariant(product=product)
+            if variant.pk in keep:
+                continue
+            variant.option, variant.color = option, color
+            for f in ('price', 'compare_price', 'stock', 'sku', 'is_active'):
+                setattr(variant, f, row[f])
+            take_image(variant, 'variant_image', row['key'], row['remove_image'])
+            variant.save()
+            keep.add(variant.pk)
+        ProductVariant.objects.filter(product=product).exclude(pk__in=keep).delete()
+        product.sync_from_variants(user)
+
     def clean_sku(self):
         return (self.cleaned_data.get('sku') or '').strip().upper()
 
@@ -170,24 +302,13 @@ class ProductForm(StyledModelForm):
 
     def clean(self):
         data = super().clean()
+        if (data.get('options_data') or data.get('colors_data')) and not data.get('variants_data')                 and 'variants_data' in self.cleaned_data:
+            self.add_error('variants_data', 'Đã có loại màn / màu – vui lòng nhập giá cho ít nhất 1 tổ hợp ở bảng biến thể.')
         if not data.get('sku') and data.get('category'):
             model = IPhoneModel.objects.filter(pk__in=self.data.getlist('compat_models')).order_by('series', 'display_order').first()
             data['sku'] = generate_sku(data['category'], model.name if model else '')
             self.instance.sku = data['sku']
         return data
-
-
-def generate_sku(category, model_name: str = '') -> str:
-    """SKU dạng IP-{MÃ_DANH_MỤC}-{MÃ_MODEL}-{SỐ}, ví dụ IP-SCR-13PRO-001 (số tự tăng, không trùng)."""
-    from core.utils import strip_accents
-
-    code = (category.parent.code if category.parent_id and not category.code else category.code) or 'GEN'
-    model = strip_accents(model_name).upper().replace('IPHONE', '').replace(' ', '')[:10] or 'GEN'
-    prefix = f'IP-{code}-{model}-'
-    n = 1
-    while Product.objects.filter(sku=f'{prefix}{n:03d}').exists():
-        n += 1
-    return f'{prefix}{n:03d}'
 
 
 class MultipleImageInput(forms.ClearableFileInput):

@@ -88,7 +88,7 @@
           {% for line in summary.lines %}{% if line.valid and line.item.is_selected %}
             <li class="flex gap-3 text-sm">
               <span class="relative shrink-0"><img src="{{ line.item.product.image_url }}" alt="" class="h-14 w-14 rounded-lg bg-slate-50 object-cover"><span class="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-700 px-1 text-[11px] text-white">{{ line.item.quantity }}</span></span>
-              <span class="min-w-0 flex-1"><span class="line-clamp-2">{{ line.item.product.name }}</span><span class="text-xs text-muted">{{ line.item.quantity }} × {{ line.unit_price|vnd }}</span></span>
+              <span class="min-w-0 flex-1"><span class="line-clamp-2">{{ line.item.product.name }}</span>{% if line.item.variant_label %}<span class="block text-xs font-medium text-primary">{{ line.item.variant_label }}</span>{% endif %}<span class="text-xs text-muted">{{ line.item.quantity }} × {{ line.unit_price|vnd }}</span></span>
               <span class="font-semibold">{{ line.line_total|vnd }}</span>
             </li>
           {% endif %}{% endfor %}

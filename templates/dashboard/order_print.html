@@ -21,7 +21,7 @@
     </div>
     <table class="mt-6 w-full border-collapse">
       <thead><tr class="border-b-2 border-text text-left"><th class="py-2">Sản phẩm</th><th>SKU</th><th class="text-right">Đơn giá</th><th class="text-right">SL</th><th class="text-right">Thành tiền</th></tr></thead>
-      <tbody>{% for i in order.items.all %}<tr class="border-b border-border"><td class="py-2">{{ i.product_name }}</td><td>{{ i.product_sku }}</td><td class="text-right">{{ i.unit_price|vnd }}</td><td class="text-right">{{ i.quantity }}</td><td class="text-right">{{ i.line_total|vnd }}</td></tr>{% endfor %}</tbody>
+      <tbody>{% for i in order.items.all %}<tr class="border-b border-border"><td class="py-2">{{ i.display_name }}</td><td>{{ i.product_sku }}</td><td class="text-right">{{ i.unit_price|vnd }}</td><td class="text-right">{{ i.quantity }}</td><td class="text-right">{{ i.line_total|vnd }}</td></tr>{% endfor %}</tbody>
     </table>
     <dl class="ml-auto mt-4 max-w-xs space-y-1">
       <div class="flex justify-between"><dt>Tạm tính</dt><dd>{{ order.subtotal|vnd }}</dd></div>

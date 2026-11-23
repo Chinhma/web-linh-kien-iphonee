@@ -12,15 +12,15 @@ from products.models import Product
 AJAX = {'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest', 'content_type': 'application/json'}
 
 
+from dashboard.menu import _url  # noqa: E402
+
+
 def menu_urls():
     for _title, items in MENU:
         for item in items:
             for node in [item, *item.children]:
                 if node.url_name:
-                    url = reverse(f'dashboard:{node.url_name}')
-                    if node.query:
-                        url += '?' + '&'.join(f'{k}={v}' for k, v in node.query.items())
-                    yield url
+                    yield _url(node)
 
 
 class AdminPanelPagesTests(TestCase):
@@ -73,7 +73,7 @@ class AdminPermissionTests(TestCase):
     def test_regular_admin_cannot_manage_admins(self):
         self.client.force_login(self.admin)
         self.assertEqual(self.client.get(reverse('dashboard:admin_accounts')).status_code, 403)
-        self.assertEqual(self.client.get('/django-admin/').status_code, 302)  # Django admin chỉ Superuser
+        self.assertEqual(self.client.get('/admin/').status_code, 302)  # Django admin chỉ Superuser
 
     def test_admin_header_and_login_stays_on_site(self):
         from core.tests.factories import PASSWORD

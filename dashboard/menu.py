@@ -87,7 +87,6 @@ MENU = [
             I('Ma trận tương thích', 'compat_matrix'),
             I('Độ phủ linh kiện', 'compat_coverage'),
         ]),
-        I('Thương hiệu', 'brand_list', 'badge-check'),
     ]),
     ('Kho hàng', [
         I('Tồn kho', icon='warehouse', children=[
@@ -159,6 +158,7 @@ MENU = [
             I('Trạng thái tích hợp', 'system_info'),
         ]),
         I('Tài khoản quản trị', 'admin_accounts', 'shield', superuser_only=True),
+        I('Django Admin', 'admin:index', 'database', superuser_only=True),
         I('Hồ sơ của tôi', 'profile', 'user-cog'),
     ]),
 ]
@@ -175,7 +175,7 @@ ALIASES = {
 
 
 def _url(item: Item) -> str:
-    url = reverse(f'dashboard:{item.url_name}')
+    url = reverse(item.url_name if ':' in item.url_name else f'dashboard:{item.url_name}')
     if item.query:
         url += '?' + '&'.join(f'{k}={v}' for k, v in item.query.items())
     return url

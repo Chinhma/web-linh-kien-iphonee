@@ -5,9 +5,10 @@ from django.urls import include, path, re_path
 from django.views.generic import RedirectView
 
 urlpatterns = [
-    # Django admin mặc định: chỉ Superuser, dự phòng kỹ thuật. Giao diện quản lý chính là /quan-tri/
-    path('django-admin/', admin.site.urls),
-    re_path(r'^(admin|dashboard)(/.*)?$', RedirectView.as_view(url='/quan-tri/', permanent=False)),
+    # Django admin mặc định tại /admin/ (chỉ Superuser). Giao diện quản lý chính của web là /quan-tri/
+    path('admin/', admin.site.urls),
+    re_path(r'^django-admin/(?P<rest>.*)$', RedirectView.as_view(url='/admin/%(rest)s', permanent=False)),
+    re_path(r'^dashboard(/.*)?$', RedirectView.as_view(url='/quan-tri/', permanent=False)),
     path('accounts/', include('allauth.urls')),
     path('quan-tri/', include('dashboard.urls')),
     path('', include('accounts.urls')),

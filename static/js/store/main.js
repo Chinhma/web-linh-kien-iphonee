@@ -140,9 +140,9 @@ function initSearchSuggest() {
 }
 
 // ---------- Giỏ hàng / Mua ngay ----------
-export async function addToCart(productId, quantity = 1, { buyNow = false, button = null } = {}) {
+export async function addToCart(productId, quantity = 1, { buyNow = false, button = null, variantId = null } = {}) {
   if (!IP.isAuthenticated) {
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ type: 'add_to_cart', product_id: productId, qty: quantity, name: button?.dataset.productName || '', path: location.pathname }));
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ type: 'add_to_cart', product_id: productId, variant_id: variantId, qty: quantity, name: button?.dataset.productName || '', path: location.pathname }));
     openLoginModal();
     return null;
   }
@@ -152,7 +152,7 @@ export async function addToCart(productId, quantity = 1, { buyNow = false, butto
   }
   setLoading(button, true);
   try {
-    const res = await apiFetch('/api/cart/add/', { method: 'POST', body: { product_id: productId, quantity, buy_now: buyNow } });
+    const res = await apiFetch('/api/cart/add/', { method: 'POST', body: { product_id: productId, variant_id: variantId, quantity, buy_now: buyNow } });
     updateCounters(res.data);
     if (buyNow) {
       window.location.href = '/thanh-toan/';
@@ -174,7 +174,11 @@ function initCartButtons() {
     e.preventDefault();
     e.stopPropagation();
     const qtyInput = btn.dataset.qtyInput ? document.querySelector(btn.dataset.qtyInput) : null;
-    addToCart(Number(btn.dataset.addToCart), qtyInput ? Number(qtyInput.value) || 1 : 1, { buyNow: btn.hasAttribute('data-buy-now'), button: btn });
+    // Biến thể (loại màn × màu) đang chọn – server render sẵn trên nút; server kiểm tra lại giá & tồn kho
+    addToCart(Number(btn.dataset.addToCart), qtyInput ? Number(qtyInput.value) || 1 : 1, {
+      buyNow: btn.hasAttribute('data-buy-now'), button: btn,
+      variantId: btn.dataset.variantId ? Number(btn.dataset.variantId) : null,
+    });
   });
 }
 
@@ -224,7 +228,7 @@ async function resumePendingAction() {
     confirmText: 'Thêm vào giỏ',
     danger: false,
   });
-  if (result.confirmed) addToCart(action.product_id, action.qty || 1);
+  if (result.confirmed) addToCart(action.product_id, action.qty || 1, { variantId: action.variant_id || null });
 }
 
 // ---------- Newsletter ----------

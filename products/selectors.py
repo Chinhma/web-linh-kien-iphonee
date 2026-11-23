@@ -20,10 +20,11 @@ SORT_OPTIONS = {
 
 def with_card_data(qs):
     """Prefetch đủ dữ liệu cho Product Card (ảnh, model tương thích verified)."""
-    return qs.select_related('category', 'brand').prefetch_related(
+    return qs.select_related('category').prefetch_related(
         Prefetch('images', queryset=ProductImage.objects.order_by('-is_primary', 'display_order', 'id')),
         Prefetch('compatibilities', queryset=Compatibility.objects.filter(
             status=Compatibility.Status.VERIFIED, iphone_model__is_active=True).select_related('iphone_model')),
+        'options',
     )
 
 

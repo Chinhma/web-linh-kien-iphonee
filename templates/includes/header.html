@@ -1,6 +1,6 @@
 {% load static %}
 {% if store.announcement_text %}
-  <div id="announcement-bar" data-hash="{{ store.announcement_text|length }}{{ store.updated_at|date:'U' }}" class="bg-primary text-white">
+  <div id="announcement-bar" data-hash="{{ store.announcement_text|length }}{{ store.updated_at|date:'U' }}" class="bg-brand text-white">
     <div class="container-x flex items-center justify-center gap-3 py-2 text-center text-xs sm:text-sm">
       <i data-lucide="megaphone" class="hidden h-4 w-4 sm:block"></i>
       <span>{{ store.announcement_text }}</span>
@@ -18,8 +18,8 @@
     <form action="{% url 'products:list' %}" method="get" role="search" class="relative mx-auto hidden w-full max-w-2xl flex-1 md:block" data-search-suggest>
       <label for="header-search" class="sr-only">Tìm kiếm linh kiện</label>
       <i data-lucide="search" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted"></i>
-      <input id="header-search" name="q" value="{{ request.GET.q|default:'' }}" autocomplete="off" placeholder="Bạn cần tìm linh kiện gì? Ví dụ: màn hình iPhone 13 Pro, pin iPhone 11..." class="form-input h-11 rounded-full pl-11 pr-28">
-      <button type="submit" class="btn-primary absolute right-1 top-1/2 h-9 -translate-y-1/2 rounded-full px-5">Tìm kiếm</button>
+      <input id="header-search" name="q" value="{{ request.GET.q|default:'' }}" autocomplete="off" placeholder="Bạn cần tìm linh kiện gì? Ví dụ: màn hình iPhone 13 Pro, pin iPhone 11..." class="form-input h-11 rounded-full pl-11 pr-28 focus:border-brand focus:ring-brand/20">
+      <button type="submit" class="btn absolute right-1 bg-brand text-white hover:bg-brand-dark top-1/2 h-9 -translate-y-1/2 rounded-full px-5">Tìm kiếm</button>
       <div data-suggest-box hidden class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-white shadow-card-hover"></div>
     </form>
 
@@ -32,22 +32,22 @@
         </a>
         <a href="{% url 'cart:cart' %}" class="icon-btn relative" aria-label="Giỏ hàng">
           <i data-lucide="shopping-cart"></i>
-          <span data-cart-count {% if not cart_count %}hidden{% endif %} class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[11px] font-bold text-white">{{ cart_count }}</span>
+          <span data-cart-count {% if not cart_count %}hidden{% endif %} class="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white">{{ cart_count }}</span>
         </a>
       {% endif %}
       {% if user.is_authenticated %}
         <div class="relative" data-dropdown>
           <button type="button" data-dropdown-trigger aria-expanded="false" class="ml-1 flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-100">
             {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="" class="h-8 w-8 rounded-full object-cover">
-            {% else %}<span class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">{{ user|initials }}</span>{% endif %}
+            {% else %}<span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-bold text-white">{{ user|initials }}</span>{% endif %}
             <span class="hidden max-w-[120px] truncate text-sm font-medium xl:block">{{ user.display_name }}</span>
-            {% if is_admin_user %}<span class="badge-primary-strong px-2 py-0 text-[10px]">Admin</span>{% endif %}
+            {% if is_admin_user %}<span class="badge bg-brand text-white px-2 py-0 text-[10px]">Admin</span>{% endif %}
             <i data-lucide="chevron-down" class="hidden h-4 w-4 xl:block"></i>
           </button>
           <div data-dropdown-menu hidden class="absolute right-0 top-full mt-2 w-56 rounded-xl border border-border bg-white py-2 text-sm shadow-card-hover">
             <div class="border-b border-border px-4 pb-2 text-xs text-muted">{{ user.email }}</div>
             {% if is_admin_user %}
-              <a href="{% url 'dashboard:home' %}" class="flex items-center gap-2 px-4 py-2 font-semibold text-primary hover:bg-slate-50"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Vào trang quản trị</a>
+              <a href="{% url 'dashboard:home' %}" class="flex items-center gap-2 px-4 py-2 font-semibold text-brand hover:bg-slate-50"><i data-lucide="layout-dashboard" class="h-4 w-4"></i>Vào trang quản trị</a>
               <a href="{% url 'dashboard:profile' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="user-cog" class="h-4 w-4"></i>Hồ sơ quản trị</a>
             {% else %}
               <a href="{% url 'accounts:overview' %}" class="flex items-center gap-2 px-4 py-2 hover:bg-slate-50"><i data-lucide="user" class="h-4 w-4"></i>Tài khoản của tôi</a>
@@ -63,7 +63,7 @@
         </div>
       {% else %}
         <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="btn hidden bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-text sm:inline-flex">Đăng nhập</a>
-        <a href="{% url 'accounts:register' %}?next={{ request.get_full_path|urlencode }}" class="btn-primary hidden sm:inline-flex">Đăng ký</a>
+        <a href="{% url 'accounts:register' %}?next={{ request.get_full_path|urlencode }}" class="btn hidden bg-brand text-white hover:bg-brand-dark sm:inline-flex">Đăng ký</a>
         <a href="{% url 'accounts:login' %}" class="icon-btn sm:hidden" aria-label="Đăng nhập"><i data-lucide="user"></i></a>
       {% endif %}
     </div>
@@ -96,7 +96,7 @@
   <div id="mobile-search" hidden class="border-t border-border p-3 md:hidden">
     <form action="{% url 'products:list' %}" method="get" role="search" class="relative" data-search-suggest>
       <i data-lucide="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"></i>
-      <input name="q" autocomplete="off" placeholder="Tìm linh kiện, SKU, dòng iPhone..." aria-label="Tìm kiếm" class="form-input rounded-full pl-9">
+      <input name="q" autocomplete="off" placeholder="Tìm linh kiện, SKU, dòng iPhone..." aria-label="Tìm kiếm" class="form-input rounded-full pl-9 focus:border-brand focus:ring-brand/20">
       <div data-suggest-box hidden class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-white shadow-card-hover"></div>
     </form>
   </div>

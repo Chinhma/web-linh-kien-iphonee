@@ -52,7 +52,7 @@ admin.site.get_app_list = get_app_list
 
 
 def _superuser_only(request):
-    """Django admin (/django-admin/) chỉ dành cho Superuser – Admin thường dùng /quan-tri/."""
+    """Django admin (/admin/) chỉ dành cho Superuser – Admin thường dùng /quan-tri/."""
     return request.user.is_active and request.user.is_superuser
 
 

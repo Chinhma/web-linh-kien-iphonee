@@ -9,10 +9,12 @@ from core.models import StoreSetting
 from core.templatetags.iparts import vnd
 from products.services import resolve_category, resolve_iphone_model
 
-from . import tools
+from . import guard, tools
 
-OFF_TOPIC = ['bai van', 'lam tho', 'giai toan', 'thoi tiet', 'bong da', 'viet code', 'lap trinh', 'chinh tri', 'nau an']
-INJECTION = ['bo qua huong dan', 'ignore previous', 'gia nhap', 'cost price', 'system prompt', 'api key', 'prompt he thong']
+OFF_TOPIC = ['bai van', 'lam tho', 'giai toan', 'thoi tiet', 'bong da', 'viet code', 'lap trinh', 'chinh tri', 'nau an',
+             'phuong trinh', 'dich sang', 'ke chuyen', 'viet van', 'chung khoan', 'xo so']
+REFUSE_REPLY = ('Xin lỗi, mình không thể chia sẻ thông tin nội bộ của cửa hàng. Mình có thể giúp bạn tìm linh kiện '
+                'hoặc kiểm tra tương thích với dòng iPhone của bạn nhé!')
 
 
 def _product_lines(products: list[dict], limit: int = 5) -> str:
@@ -29,7 +31,8 @@ def _product_lines(products: list[dict], limit: int = 5) -> str:
 
 
 def answer(message: str, user=None) -> dict:
-    text = tools.plain(message)
+    message = tools.normalize_query(message) or message  # Bỏ dấu, mở rộng viết tắt: 'pin ip 11' -> 'pin iphone 11'
+    text = message
     store = StoreSetting.get_solo()
     calls, results = [], []
 
@@ -39,9 +42,8 @@ def answer(message: str, user=None) -> dict:
         results.append({'name': name, 'args': kwargs, 'result': result})
         return result
 
-    if any(k in text for k in INJECTION):
-        return _done('Xin lỗi, mình không thể chia sẻ thông tin nội bộ của cửa hàng. Mình có thể giúp bạn tìm linh kiện '
-                     'hoặc kiểm tra tương thích với dòng iPhone của bạn nhé!', 'refuse', calls, results)
+    if guard.is_injection(message):
+        return _done(REFUSE_REPLY, 'refuse', calls, results)
     if any(k in text for k in OFF_TOPIC):
         return _done('Xin lỗi, mình chỉ hỗ trợ các câu hỏi về linh kiện iPhone và dịch vụ của iParts Store. '
                      'Bạn cần tìm linh kiện cho máy nào không?', 'off_topic', calls, results)
@@ -137,3 +139,19 @@ def _done(reply, intent, calls, results, needs_login=False, meta=None, no_result
     return {'reply': reply, 'intent': intent, 'tool_calls': calls, 'tool_results': results,
             'product_ids': product_ids, 'needs_login': needs_login, 'meta': {**(meta or {}), 'no_result': no_result},
             'link': link}
+
+
+def from_tool_results(tool_results: list[dict], message: str, user=None) -> dict:
+    """Câu trả lời dựng hoàn toàn từ dữ liệu tool (khi chữ của AI có giá không khớp dữ liệu)."""
+    products, seen = [], set()
+    for item in tool_results or []:
+        result = item.get('result') or {}
+        for p in (result.get('products') or []) + ([result['product']] if isinstance(result.get('product'), dict) else []):
+            if isinstance(p, dict) and p.get('id') and p['id'] not in seen and 'price' in p:
+                seen.add(p['id'])
+                products.append(p)
+    if not products:
+        return answer(message, user=user)
+    reply = 'Đây là thông tin chính xác từ hệ thống iParts Store:\n' + _product_lines(products)
+    return _done(reply, 'product_search', [{'name': i['name'], 'args': i.get('args', {})} for i in tool_results],
+                 tool_results)

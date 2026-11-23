@@ -1,5 +1,6 @@
 from django.conf import settings
 
+from .constants import WARRANTY_LABEL, WARRANTY_MONTHS, WARRANTY_SHORT
 from .models import StoreSetting
 
 
@@ -37,4 +38,5 @@ def store(request):
         'is_customer_user': is_customer,
         'is_admin_user': user.is_authenticated and user.is_staff,
         'google_oauth_configured': settings.GOOGLE_OAUTH_CONFIGURED,
+        'WARRANTY_MONTHS': WARRANTY_MONTHS, 'WARRANTY_LABEL': WARRANTY_LABEL, 'WARRANTY_SHORT': WARRANTY_SHORT,
     }

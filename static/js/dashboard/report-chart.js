@@ -6,14 +6,14 @@ const canvas = document.querySelector('[data-report-chart]');
 if (node && canvas && window.Chart) {
   const data = JSON.parse(node.textContent);
   const type = canvas.dataset.type || 'bar';
-  const palette = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B'];
+  const palette = ['#D70019', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B'];
   new window.Chart(canvas, {
     type,
     data: {
       labels: data.labels,
       datasets: [{
         label: canvas.dataset.label || '', data: data.data,
-        backgroundColor: type === 'doughnut' ? palette : '#2563EB', borderRadius: type === 'bar' ? 6 : 0,
+        backgroundColor: type === 'doughnut' ? palette : '#D70019', borderRadius: type === 'bar' ? 6 : 0,
       }],
     },
     options: {

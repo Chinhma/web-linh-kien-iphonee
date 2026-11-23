@@ -2,7 +2,7 @@
 import { el, formatVnd } from '../core/utils.js';
 
 const data = JSON.parse(document.getElementById('chart-data')?.textContent || '{}');
-const PALETTE = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B', '#EA580C'];
+const PALETTE = ['#D70019', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B', '#2563EB'];
 
 document.querySelectorAll('canvas[data-chart]').forEach((canvas) => {
   const d = data[canvas.dataset.chart];
@@ -19,8 +19,8 @@ document.querySelectorAll('canvas[data-chart]').forEach((canvas) => {
       datasets: [{
         label: canvas.dataset.label || '',
         data: d.data,
-        backgroundColor: type === 'doughnut' ? PALETTE : (type === 'line' ? 'rgba(37,99,235,.12)' : '#2563EB'),
-        borderColor: '#2563EB',
+        backgroundColor: type === 'doughnut' ? PALETTE : (type === 'line' ? 'rgba(215,0,25,.12)' : '#D70019'),
+        borderColor: '#D70019',
         fill: type === 'line',
         tension: 0.35,
         borderRadius: type === 'bar' ? 6 : 0,

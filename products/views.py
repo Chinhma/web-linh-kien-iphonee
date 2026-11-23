@@ -5,11 +5,13 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
+from core.constants import WARRANTY_MONTHS
 from core.models import FAQ, Banner, Page, StoreSetting
 from core.utils import api_error, api_ok
 from reviews.models import Review
 
-from .models import Brand, Category, Compatibility, IPhoneModel, Product
+from .models import Category, Compatibility, IPhoneModel, Product
+from .variants import resolve_selection
 from .selectors import (SORT_OPTIONS, compatibility_lookup, filter_products, iphone_models_grouped, on_sale_products,
                         product_compatibility_for, public_products, search_filter, with_card_data)
 
@@ -57,7 +59,6 @@ def _listing(request, template_ctx: dict, base_qs=None):
         'sort': sort,
         'sort_options': SORT_OPTIONS,
         'filter_categories': Category.objects.filter(is_active=True, parent__isnull=True).prefetch_related('children'),
-        'filter_brands': Brand.objects.filter(is_active=True),
         'iphone_groups': iphone_models_grouped(),
         'quality_choices': Product.Quality.choices,
         'selected_categories': selected_categories,
@@ -92,9 +93,19 @@ def category_detail(request, slug):
                     base_qs=public_products().filter(category_id__in=category.descendant_ids()))
 
 
+def _detail_queryset():
+    return (with_card_data(Product.objects.all())
+            .prefetch_related('compatibilities__iphone_model', 'colors', 'variants__option', 'variants__color'))
+
+
+def _purchase_context(request, product, sel) -> dict:
+    """Ngữ cảnh chung cho khối chọn mua + thanh mua dính ở đáy (render lần đầu và trả qua API)."""
+    return {'product': product, 'sel': sel, 'can_buy': sel['can_buy'], 'max_qty': sel['max_qty'],
+            'in_wishlist': product.pk in wishlist_ids(request)}
+
+
 def product_detail(request, slug):
-    product = (with_card_data(Product.objects.all()).prefetch_related('compatibilities__iphone_model')
-               .filter(slug=slug).first())
+    product = _detail_queryset().filter(slug=slug).first()
     if product is None:
         raise Http404
     preview_warning = ''
@@ -115,6 +126,8 @@ def product_detail(request, slug):
     if star_filter in {'1', '2', '3', '4', '5'}:
         reviews = reviews.filter(rating=int(star_filter))
     review_page = Paginator(reviews, 5).get_page(request.GET.get('trang_dg'))
+
+    sel = resolve_selection(product, request.GET.get('loai'), request.GET.get('mau'))
 
     model_ids = [c.iphone_model_id for c in verified]
     related = (with_card_data(public_products().exclude(pk=product.pk)
@@ -148,7 +161,9 @@ def product_detail(request, slug):
         'bought_together': bought_together,
         'in_wishlist': product.pk in wishlist_ids(request),
         'wishlist_ids': wishlist_ids(request),
-        'max_qty': min(product.stock_quantity, 10),
+        'max_qty': sel['max_qty'],
+        'sel': sel,
+        'can_buy': sel['can_buy'],
         'store': store,
         'warranty_page': warranty_page,
         'preview_warning': preview_warning,
@@ -176,7 +191,7 @@ def _compat_item(c: Compatibility) -> dict:
         'quality': p.get_quality_grade_display(), 'quality_code': p.quality_grade,
         'price': p.effective_price, 'original_price': p.price if p.is_on_sale else None,
         'discount_percent': p.discount_percent, 'stock_status': p.stock_status, 'stock_label': p.stock_label,
-        'warranty_months': p.warranty_months, 'specs': specs[:3], 'note': c.note,
+        'warranty_months': WARRANTY_MONTHS, 'specs': specs[:3], 'note': c.note,
         'category': p.category.parent.name if p.category.parent_id else p.category.name,
         'category_slug': p.category.slug,
         'purchasable': p.stock_quantity > 0,
@@ -205,6 +220,25 @@ def api_compatibility(request):
         'category': {'name': category.name, 'slug': category.slug} if category else None,
         'count': len(items), 'items': items, 'other_categories': available,
         'sample_notice': StoreSetting.get_solo().show_sample_data_notice,
+    })
+
+
+@require_GET
+def api_product_variant(request, pk):
+    """GET /api/products/<pk>/variant/?loai=&mau= – giá + tồn kho + HTML khối chọn mua của tổ hợp (server tính giá)."""
+    from django.template.loader import render_to_string
+
+    product = _detail_queryset().filter(pk=pk).first()
+    if product is None or (product.status != Product.Status.ACTIVE and not request.user.is_staff):
+        return api_error('NOT_FOUND', 'Sản phẩm không tồn tại.', status=404)
+    sel = resolve_selection(product, request.GET.get('loai'), request.GET.get('mau'))
+    ctx = _purchase_context(request, product, sel)
+    return api_ok({
+        'variant_id': sel['variant_id'], 'price': sel['price'], 'original_price': sel['original_price'],
+        'discount_percent': sel['discount_percent'], 'stock_status': sel['stock_status'], 'sku': sel['sku'],
+        'image': sel['image'], 'query': sel['query'], 'notice': sel['notice'], 'summary': sel['summary'],
+        'panel_html': render_to_string('store/_purchase_panel.html', ctx, request),
+        'bar_html': render_to_string('store/_buy_bar.html', ctx, request),
     })
 
 

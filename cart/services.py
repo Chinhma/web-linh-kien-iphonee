@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from django.db import transaction
 
-from products.models import Product
+from products.models import Product, ProductVariant
 
 from .models import Cart, CartItem, WishlistItem
 
@@ -24,29 +24,57 @@ def get_cart(user) -> Cart:
     return cart
 
 
-def max_quantity_for(product: Product) -> int:
-    return max(0, min(product.stock_quantity, MAX_QTY_PER_LINE))
+def available_stock(product: Product, variant=None) -> int:
+    """Tồn kho áp dụng: theo biến thể nếu có, ngược lại theo sản phẩm."""
+    return variant.stock if variant is not None else product.stock_quantity
+
+
+def max_quantity_for(product: Product, variant=None) -> int:
+    return max(0, min(available_stock(product, variant), MAX_QTY_PER_LINE))
+
+
+def _limit_message(stock: int) -> str:
+    if stock < MAX_QTY_PER_LINE:
+        return f'Chỉ còn {stock} sản phẩm trong kho.'
+    return f'Mỗi sản phẩm mua tối đa {MAX_QTY_PER_LINE} chiếc.'
+
+
+def variant_is_sellable(variant) -> bool:
+    return (variant.is_active and (not variant.option_id or variant.option.is_active)
+            and (not variant.color_id or variant.color.is_active))
 
 
 @transaction.atomic
-def add_to_cart(user, product_id: int, quantity: int = 1, select_only: bool = False) -> tuple[CartItem, str]:
-    """Thêm vào giỏ (cộng dồn). Giới hạn 1 ≤ SL ≤ min(tồn kho, 10). Trả về (dòng giỏ, thông báo)."""
+def add_to_cart(user, product_id: int, quantity: int = 1, select_only: bool = False,
+                variant_id: int | None = None) -> tuple[CartItem, str]:
+    """Thêm vào giỏ (cộng dồn). Giới hạn 1 ≤ SL ≤ min(tồn kho, 10). Trả về (dòng giỏ, thông báo).
+
+    Sản phẩm có biến thể (loại màn × màu) thì bắt buộc gửi variant_id thuộc chính sản phẩm đó, còn bán và còn hàng.
+    Giá và tồn kho luôn lấy từ DB theo variant_id – không tin giá trình duyệt gửi lên.
+    """
     product = Product.objects.select_related('category').filter(pk=product_id).first()
     if product is None or product.status != Product.Status.ACTIVE or not product.category.is_active:
         raise CartError('Sản phẩm không tồn tại hoặc đã ngừng kinh doanh.', 'PRODUCT_UNAVAILABLE')
     if product.stock_quantity <= 0:
         raise CartError('Sản phẩm đã hết hàng.', 'OUT_OF_STOCK')
+    variant = None
+    if ProductVariant.objects.filter(product=product, is_active=True).exists():
+        variant = (ProductVariant.objects.select_related('option', 'color').filter(product=product, pk=variant_id).first()
+                   if variant_id else None)
+        if variant is None or not variant_is_sellable(variant):
+            raise CartError('Vui lòng chọn loại màn / màu sắc trước khi thêm vào giỏ.', 'VARIANT_REQUIRED')
+        if variant.stock <= 0:
+            raise CartError(f'"{variant.label}" đã hết hàng.', 'OUT_OF_STOCK')
     quantity = max(1, int(quantity or 1))
     cart = get_cart(user)
     item, created = CartItem.objects.select_for_update().get_or_create(
-        cart=cart, product=product, defaults={'quantity': 0})
+        cart=cart, product=product, variant=variant, defaults={'quantity': 0})
     desired = item.quantity + quantity
-    limit = max_quantity_for(product)
+    limit = max_quantity_for(product, variant)
     message = 'Đã thêm sản phẩm vào giỏ hàng.'
     if desired > limit:
         desired = limit
-        message = (f'Chỉ còn {product.stock_quantity} sản phẩm trong kho.' if product.stock_quantity < MAX_QTY_PER_LINE
-                   else f'Mỗi sản phẩm mua tối đa {MAX_QTY_PER_LINE} chiếc.')
+        message = _limit_message(available_stock(product, variant))
     item.quantity = desired
     item.is_selected = True
     item.save()
@@ -56,7 +84,8 @@ def add_to_cart(user, product_id: int, quantity: int = 1, select_only: bool = Fa
 
 
 def _owned_item(user, item_id) -> CartItem:
-    item = CartItem.objects.select_related('product', 'product__category').filter(pk=item_id, cart__user=user).first()
+    item = (CartItem.objects.select_related('product', 'product__category', 'variant')
+            .filter(pk=item_id, cart__user=user).first())
     if item is None:
         raise CartError('Không tìm thấy sản phẩm trong giỏ.', 'NOT_FOUND')
     return item
@@ -64,15 +93,14 @@ def _owned_item(user, item_id) -> CartItem:
 
 def update_quantity(user, item_id: int, quantity: int) -> tuple[CartItem, str]:
     item = _owned_item(user, item_id)
-    limit = max_quantity_for(item.product)
+    limit = max_quantity_for(item.product, item.variant)
     if limit == 0:
         raise CartError('Sản phẩm đã hết hàng.', 'OUT_OF_STOCK')
     quantity = max(1, int(quantity or 1))
     message = 'Đã cập nhật số lượng.'
     if quantity > limit:
         quantity = limit
-        message = f'Chỉ còn {item.product.stock_quantity} sản phẩm trong kho.' if item.product.stock_quantity < MAX_QTY_PER_LINE \
-            else f'Mỗi sản phẩm mua tối đa {MAX_QTY_PER_LINE} chiếc.'
+        message = _limit_message(available_stock(item.product, item.variant))
     item.quantity = quantity
     item.save(update_fields=['quantity'])
     return item, message
@@ -96,7 +124,7 @@ class CartLine:
 
     @property
     def max_qty(self) -> int:
-        return max(1, max_quantity_for(self.item.product))
+        return max(1, max_quantity_for(self.item.product, self.item.variant))
 
 
 @dataclass
@@ -120,8 +148,8 @@ def build_cart_summary(user, session=None, fix_quantities: bool = True) -> CartS
     from promotions.services import validate_coupon
 
     cart = get_cart(user)
-    items = (cart.items.select_related('product', 'product__category')
-             .prefetch_related('product__images', 'product__compatibilities__iphone_model'))
+    items = (cart.items.select_related('product', 'product__category', 'variant', 'variant__option', 'variant__color')
+             .prefetch_related('product__images', 'product__variants', 'product__compatibilities__iphone_model'))
     summary = CartSummary()
     for item in items:
         product = item.product
@@ -130,16 +158,22 @@ def build_cart_summary(user, session=None, fix_quantities: bool = True) -> CartS
             valid, warning = False, 'Sản phẩm đã ngừng kinh doanh.'
         elif product.stock_quantity <= 0:
             valid, warning = False, 'Sản phẩm đã hết hàng.'
-        elif item.quantity > max_quantity_for(product):
+        elif item.variant_id and not variant_is_sellable(item.variant):
+            valid, warning = False, f'"{item.variant.label}" đã ngừng bán.'
+        elif item.variant_id and item.variant.stock <= 0:
+            valid, warning = False, f'"{item.variant.label}" đã hết hàng.'
+        elif item.variant_id is None and any(v.is_active for v in product.variants.all()):
+            valid, warning = False, 'Vui lòng xóa và chọn lại loại màn / màu cho sản phẩm này.'
+        elif item.quantity > max_quantity_for(product, item.variant):
             if fix_quantities:
-                item.quantity = max_quantity_for(product)
+                item.quantity = max_quantity_for(product, item.variant)
                 item.save(update_fields=['quantity'])
-                warning = f'Chỉ còn {product.stock_quantity} sản phẩm trong kho, số lượng đã được điều chỉnh.'
+                warning = f'Chỉ còn {available_stock(product, item.variant)} sản phẩm trong kho, số lượng đã được điều chỉnh.'
                 summary.messages.append(f'{product.name}: {warning}')
         if not valid and item.is_selected:
             item.is_selected = False
             item.save(update_fields=['is_selected'])
-        unit_price = product.effective_price
+        unit_price = item.unit_price
         line = CartLine(item=item, unit_price=unit_price, line_total=unit_price * item.quantity, valid=valid, warning=warning)
         summary.lines.append(line)
         if valid and item.is_selected:

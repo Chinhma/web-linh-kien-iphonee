@@ -115,7 +115,7 @@
 }
 
 @keyframes typing { 0%, 80%, 100% { transform: translateY(0); opacity: .5; } 40% { transform: translateY(-4px); opacity: 1; } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); } 100% { box-shadow: 0 0 0 18px rgba(37,99,235,0); } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(215,0,25,.5); } 100% { box-shadow: 0 0 0 18px rgba(215,0,25,0); } }
 
 @media print {
   .no-print, .admin-sidebar, [data-bulk-bar] { display: none !important; }

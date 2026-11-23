@@ -32,16 +32,6 @@
       {% endfor %}
     </div>
   </fieldset>
-  {% if filter_brands %}
-  <fieldset>
-    <legend class="mb-2 font-semibold">Thương hiệu</legend>
-    <div class="space-y-1.5">
-      {% for brand in filter_brands %}
-        <label class="flex items-center gap-2"><input type="checkbox" name="brand" value="{{ brand.slug }}" class="form-check" {% if brand.slug in selected_brands %}checked{% endif %}> {{ brand.name }}</label>
-      {% endfor %}
-    </div>
-  </fieldset>
-  {% endif %}
   <fieldset>
     <legend class="mb-2 font-semibold">Khoảng giá (₫)</legend>
     <div class="flex items-center gap-2">

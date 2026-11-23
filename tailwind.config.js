@@ -4,7 +4,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: '#2563EB', dark: '#1D4ED8', light: '#DBEAFE' },
+        // Màu chủ đạo: ĐỎ #D70019. Riêng thanh thông báo + hàng logo/ô tìm kiếm ở header dùng `brand` (xanh dương).
+        primary: { DEFAULT: '#D70019', dark: '#B00014', light: '#FFE4E7' },
+        brand: { DEFAULT: '#2563EB', dark: '#1D4ED8', light: '#DBEAFE' },
         background: '#F8FAFC',
         surface: '#FFFFFF',
         text: '#0F172A',

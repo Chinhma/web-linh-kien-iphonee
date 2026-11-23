@@ -6,7 +6,7 @@ import { el, formatVnd } from '../core/utils.js';
 const { Chart } = window;
 const root = document.querySelector('[data-charts]');
 const charts = {};
-const PALETTE = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B', '#EA580C'];
+const PALETTE = ['#D70019', '#16A34A', '#F59E0B', '#DC2626', '#7C3AED', '#0891B2', '#DB2777', '#65A30D', '#64748B', '#2563EB'];
 Chart.defaults.font.family = '"Be Vietnam Pro", Inter, system-ui, sans-serif';
 Chart.defaults.color = '#64748B';
 
@@ -54,7 +54,7 @@ async function trend(period) {
   setEmpty('revenue-trend', !d.datasets[0].data.some((v) => v > 0));
   draw('revenue-trend', {
     type: 'line',
-    data: { labels: d.labels, datasets: [{ label: 'Doanh thu', data: d.datasets[0].data, borderColor: '#2563EB', backgroundColor: 'rgba(37,99,235,.14)', fill: true, tension: 0.35, pointRadius: 3 }] },
+    data: { labels: d.labels, datasets: [{ label: 'Doanh thu', data: d.datasets[0].data, borderColor: '#D70019', backgroundColor: 'rgba(215,0,25,.14)', fill: true, tension: 0.35, pointRadius: 3 }] },
     options: { maintainAspectRatio: false, plugins: { legend: { display: false },
       tooltip: { callbacks: { label: (c) => `${formatVnd(c.raw)} · ${d.orders[c.dataIndex]} đơn` } } },
       scales: { y: { beginAtZero: true, ticks: { callback: short } }, x: { grid: { display: false } } } },
